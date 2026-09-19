@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Gateway Semântico Multiprotocolo</title>
+  <title>Gateway de Integração Industrial</title>
   <link rel="icon" type="image/png" href="../assets/images/logo_weg.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -22,7 +22,7 @@
         <img src="../assets/images/logo_weg.png" alt="WEG">
       </span>
       <span class="brand-text">
-        <b>Gateway Semântico</b>
+        <b>Integração Industrial</b>
         <span>MMS · DNP3 · MODBUS · OPCUA</span>
       </span>
     </div>
@@ -32,6 +32,10 @@
       <button class="tab" data-view="mapeamentos" role="tab">Mapeamentos</button>
       <button class="tab" data-view="historico" role="tab">Histórico</button>
     </nav>
+    <button class="profile-trigger" id="btn-profile" type="button" aria-label="Abrir perfil do operador">
+      <span class="profile-avatar" id="profile-avatar">OP</span>
+      <span class="profile-trigger-copy"><b id="profile-trigger-name">Operador</b><small>Subestação SE-01</small></span>
+    </button>
     <button class="btn-help" id="btn-help" type="button">Como funciona?</button>
   </div>
 
@@ -49,16 +53,16 @@
       </div>
 
       <div class="panel">
-        <h2>Demonstração guiada
+        <h2>Teste de integração
           <small>roda os 2 exemplos do desafio + 1 falha + 1 config inválida</small>
         </h2>
-        <button class="btn btn-primary" id="btn-run-demo" type="button">▶ Rodar demonstração</button>
+        <button class="btn btn-primary" id="btn-run-demo" type="button">▶ Executar teste</button>
         <span class="hint-line" id="demo-feedback"></span>
       </div>
 
       <!-- ================= DASHBOARD ================= -->
       <div class="panel">
-        <h2>Dashboard administrativo <small>atualização automática a cada 5 segundos</small></h2>
+        <h2>Painel operacional <small>atualização automática a cada 5 segundos</small></h2>
         <div class="grid cols-4" id="dash-stats-grid" style="margin-bottom:14px;"></div>
         <div class="grid cols-2">
           <div class="chart-box">
@@ -118,7 +122,7 @@
     <section class="view" id="view-conversor">
       <h1 class="page-title">Conversor de pontos</h1>
       <p class="page-sub">Escolha um ponto, de onde o dado está vindo agora e para onde ele deve ser publicado. O
-        gateway normaliza para o modelo canônico e reporta qualquer metadado perdido na tradução.</p>
+        gateway padroniza os dados entre os protocolos e informa qualquer metadado perdido na conversão.</p>
 
       <div class="panel">
         <h2>1 · Ponto</h2>
@@ -236,11 +240,11 @@
 
   <div class="modal-backdrop" id="help-backdrop">
     <div class="modal">
-      <h3>Como o gateway funciona</h3>
+      <h3>Como funciona a integração</h3>
       <p>Cada protocolo industrial (IEC 61850 MMS, DNP3, Modbus, OPC UA) representa um dado de um jeito diferente. O
-        gateway lê o valor bruto de um protocolo de origem e o normaliza para um <b style="color:var(--text)">modelo
-          canônico</b>: valor de engenharia, tipo, unidade, qualidade e estampa de tempo.</p>
-      <p>Ao publicar esse ponto canônico em outro protocolo, o gateway tenta representar tudo o que foi lido. Quando o
+        gateway lê o valor bruto de um protocolo de origem e o converte para um <b style="color:var(--text)">formato
+          padronizado</b>: valor de engenharia, tipo, unidade, qualidade e estampa de tempo.</p>
+      <p>Ao publicar esse ponto em outro protocolo, o gateway tenta preservar tudo o que foi lido. Quando o
         destino não tem um canal equivalente — por exemplo, <b style="color:var(--text)">Modbus não representa qualidade
           nem timestamp nativamente</b> — a perda é registrada explicitamente como um evento (<i>loss</i>), em vez de
         simplesmente descartada em silêncio.</p>
@@ -251,6 +255,25 @@
         conversão para os outros destinos.</p>
       <div class="close-row"><button class="btn btn-primary" id="btn-help-close" type="button">Entendi</button></div>
     </div>
+  </div>
+
+  <div class="profile-backdrop" id="profile-backdrop" aria-hidden="true">
+    <section class="profile-sheet" role="dialog" aria-modal="true" aria-labelledby="profile-title">
+      <div class="profile-sheet-head">
+        <div><span class="eyebrow">Perfil do operador</span><h2 id="profile-title">Configurações locais</h2></div>
+        <button class="profile-close" id="btn-profile-close" type="button" aria-label="Fechar perfil">×</button>
+      </div>
+      <div class="profile-identity">
+        <span class="profile-avatar profile-avatar-large" id="profile-avatar-large">OP</span>
+        <div><strong id="profile-card-name">Operador</strong><span id="profile-card-role">Supervisão de integração</span></div>
+      </div>
+      <form id="profile-form" class="profile-form">
+        <label class="field"><span class="lbl">Nome exibido</span><input id="profile-name" type="text" maxlength="40" placeholder="Nome do operador"></label>
+        <label class="field"><span class="lbl">Equipe / setor</span><input id="profile-team" type="text" maxlength="50" placeholder="Operação e manutenção"></label>
+        <div class="profile-meta"><span>Subestação monitorada</span><b>SE-01 · Centro de Operação</b></div>
+        <div class="profile-actions"><button class="btn btn-ghost" id="btn-profile-cancel" type="button">Cancelar</button><button class="btn btn-primary" type="submit">Salvar perfil</button></div>
+      </form>
+    </section>
   </div>
 
   <script src="app.js"></script>

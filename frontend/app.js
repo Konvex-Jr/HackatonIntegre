@@ -524,11 +524,11 @@
         document.getElementById("demo-feedback").textContent = "rodando…";
         apiPost("/api/demo").then(function (entries) {
           document.getElementById("demo-feedback").textContent = entries.length + " evento(s) gerado(s) — veja em Histórico.";
-          toast("Demonstração concluída: " + entries.length + " evento(s) registrado(s).", "success");
+          toast("Teste concluído: " + entries.length + " evento(s) registrado(s).", "success");
           loadAdapters();
           loadDashboardSummary();
         }).catch(function (err) {
-          reportApiError(err, "Falha ao rodar a demonstração.");
+          reportApiError(err, "Falha ao executar o teste.");
           document.getElementById("demo-feedback").textContent = "";
         }).then(function () { btn.disabled = false; });
       });
@@ -1138,7 +1138,7 @@
         var wrap = document.getElementById("hist-view-lista");
         wrap.innerHTML = "";
         if (!total) {
-          wrap.appendChild(el("div", { class: "empty-state", text: logsAccum.length ? "Nenhum evento corresponde aos filtros atuais." : "Nenhum evento ainda. Rode a demonstração no Painel ou faça uma conversão." }));
+          wrap.appendChild(el("div", { class: "empty-state", text: logsAccum.length ? "Nenhum evento corresponde aos filtros atuais." : "Nenhum evento ainda. Execute um teste no Painel ou faça uma conversão." }));
           return;
         }
         groups.forEach(function (g) {
@@ -1291,6 +1291,55 @@
           renderHistorico();
           toast("Histórico limpo.", "success");
         }).catch(function (err) { reportApiError(err, "Falha ao limpar histórico."); });
+      });
+
+      /* ============ operator profile ============ */
+      var profileBackdrop = document.getElementById("profile-backdrop");
+      var profileForm = document.getElementById("profile-form");
+      var profileName = document.getElementById("profile-name");
+      var profileTeam = document.getElementById("profile-team");
+      var profileData = JSON.parse(localStorage.getItem("operator-profile") || "null") || { name: "Operador", team: "Supervisão de integração" };
+      var profileTriggerName = document.getElementById("profile-trigger-name");
+      var profileCardName = document.getElementById("profile-card-name");
+      var profileCardRole = document.getElementById("profile-card-role");
+      var profileAvatar = document.getElementById("profile-avatar");
+      var profileAvatarLarge = document.getElementById("profile-avatar-large");
+
+      function profileInitials(name) {
+        return name.trim().split(/\s+/).slice(0, 2).map(function (part) { return part.charAt(0); }).join("").toUpperCase() || "OP";
+      }
+
+      function renderProfile() {
+        var initials = profileInitials(profileData.name);
+        profileTriggerName.textContent = profileData.name;
+        profileCardName.textContent = profileData.name;
+        profileCardRole.textContent = profileData.team;
+        profileAvatar.textContent = initials;
+        profileAvatarLarge.textContent = initials;
+      }
+
+      function toggleProfile(open) {
+        profileBackdrop.classList.toggle("open", open);
+        profileBackdrop.setAttribute("aria-hidden", open ? "false" : "true");
+        if (open) {
+          profileName.value = profileData.name;
+          profileTeam.value = profileData.team;
+          requestAnimationFrame(function () { profileName.focus(); });
+        }
+      }
+
+      renderProfile();
+      document.getElementById("btn-profile").addEventListener("click", function () { toggleProfile(true); });
+      document.getElementById("btn-profile-close").addEventListener("click", function () { toggleProfile(false); });
+      document.getElementById("btn-profile-cancel").addEventListener("click", function () { toggleProfile(false); });
+      profileBackdrop.addEventListener("click", function (event) { if (event.target === profileBackdrop) toggleProfile(false); });
+      profileForm.addEventListener("submit", function (event) {
+        event.preventDefault();
+        profileData = { name: profileName.value.trim() || "Operador", team: profileTeam.value.trim() || "Supervisão de integração" };
+        localStorage.setItem("operator-profile", JSON.stringify(profileData));
+        renderProfile();
+        toggleProfile(false);
+        toast("Perfil atualizado nesta estação.", "success");
       });
 
       /* ============ help modal ============ */
