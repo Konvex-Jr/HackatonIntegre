@@ -1,15 +1,3 @@
-"""API REST para o gateway semântico multiprotocolo.
-
-Expõe o núcleo (pacote `gateway/`) via HTTP, mantém um log em memória de
-todas as conversões/eventos e serve o frontend estático em `frontend/`
-para visualização.
-
-Rodar:
-    pip install fastapi "uvicorn[standard]" --break-system-packages
-    uvicorn api:app --reload
-Depois abra http://127.0.0.1:8000
-"""
-
 from __future__ import annotations
 
 import time
@@ -21,10 +9,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from gateway.adapters import build_default_adapters
-from gateway.canonical import CanonicalPoint
-from gateway.engine import ConversionReport, GatewayEngine
-from gateway.registry import MappingRegistry, PointMapping, ProtocolBinding, ValidationError
+from gateway.adapters.factory import build_default_adapters
+from gateway.domain.canonical import CanonicalPoint
+from gateway.engine.engine import GatewayEngine
+from gateway.engine.report import ConversionReport
+from gateway.registry.binding import ProtocolBinding
+from gateway.registry.exceptions import BindingNotFoundError, MappingNotFoundError, ValidationError
+from gateway.registry.mapping import PointMapping
+from gateway.registry.registry import MappingRegistry
+from gateway.registry.validation import validate_mapping
 
 BASE_DIR = Path(__file__).parent
 DATA_DIR = BASE_DIR / "data"
@@ -51,24 +44,17 @@ LOG: List[Dict[str, Any]] = []
 LOG_LIMIT = 300
 
 
-# ------------------------------------------------------------- serialização
-def canonical_to_dict(c: Optional[CanonicalPoint]) -> Optional[Dict[str, Any]]:
-    if c is None:
+def canonical_to_dict(canonical: Optional[CanonicalPoint]) -> Optional[Dict[str, Any]]:
+    if canonical is None:
         return None
     return {
-        "value": c.value,
-        "data_type": c.data_type,
-        "unit": c.unit,
-        "quality": {
-            "validity": c.quality.validity.value,
-            "flags": sorted(c.quality.flags),
-        },
-        "timestamp": {
-            "value_utc": c.timestamp.value_utc.isoformat(timespec="milliseconds"),
-            "sync_source": c.timestamp.sync_source,
-        },
-        "source_protocol": c.source_protocol,
-        "source_raw": c.source_raw,
+        "value": canonical.value,
+        "data_type": canonical.data_type,
+        "unit": canonical.unit,
+        "quality": canonical.quality.as_dict(),
+        "timestamp": canonical.timestamp.as_dict(),
+        "source_protocol": canonical.source_protocol,
+        "source_raw": canonical.source_raw,
     }
 
 
@@ -83,7 +69,6 @@ def report_to_dict(report: ConversionReport) -> Dict[str, Any]:
 
 
 def log_event(kind: str, payload: Dict[str, Any]) -> Dict[str, Any]:
-    """kind: 'convert' | 'info' | 'error'"""
     entry = {"id": len(LOG) + 1, "kind": kind, "logged_at": time.time(), **payload}
     LOG.append(entry)
     if len(LOG) > LOG_LIMIT:
@@ -91,7 +76,6 @@ def log_event(kind: str, payload: Dict[str, Any]) -> Dict[str, Any]:
     return entry
 
 
-# ------------------------------------------------------------------ schemas
 class ConvertRequest(BaseModel):
     point_id: str
     source: str
@@ -110,6 +94,10 @@ class BindingIn(BaseModel):
     scale: float = 1.0
     offset: float = 0.0
     raw_value: Optional[Any] = None
+    native_validity: Optional[str] = None
+    native_quality_flags: List[str] = []
+    min_engineering: Optional[float] = None
+    max_engineering: Optional[float] = None
 
 
 class MappingIn(BaseModel):
@@ -117,12 +105,11 @@ class MappingIn(BaseModel):
     bindings: Dict[str, BindingIn]
 
 
-# -------------------------------------------------------------------- rotas
 @app.get("/api/mappings")
 def list_mappings():
     return [
-        {"point_id": m.point_id, "protocols": sorted(m.bindings.keys())}
-        for m in registry.list()
+        {"point_id": mapping.point_id, "protocols": sorted(mapping.bindings.keys())}
+        for mapping in registry.list()
     ]
 
 
@@ -130,32 +117,32 @@ def list_mappings():
 def show_mapping(point_id: str):
     try:
         return registry.get(point_id).to_dict()
-    except KeyError as e:
-        raise HTTPException(404, str(e))
+    except MappingNotFoundError as error:
+        raise HTTPException(404, str(error))
 
 
 @app.post("/api/mappings/validate")
 def validate_mappings(point_id: Optional[str] = None):
     if point_id:
         try:
-            registry.validate_mapping(registry.get(point_id))
+            validate_mapping(registry.get(point_id))
             return {point_id: None}
-        except (KeyError, ValidationError) as e:
-            return {point_id: str(e)}
+        except (MappingNotFoundError, ValidationError) as error:
+            return {point_id: str(error)}
     return registry.validate_all()
 
 
 @app.post("/api/mappings")
 def add_mapping(mapping_in: MappingIn):
     bindings = {
-        proto: ProtocolBinding(**b.dict()) for proto, b in mapping_in.bindings.items()
+        proto: ProtocolBinding(**binding.dict()) for proto, binding in mapping_in.bindings.items()
     }
     mapping = PointMapping(point_id=mapping_in.point_id, bindings=bindings)
     try:
         registry.add(mapping)
-    except ValidationError as e:
-        log_event("error", {"message": str(e)})
-        raise HTTPException(422, str(e))
+    except ValidationError as error:
+        log_event("error", {"message": str(error)})
+        raise HTTPException(422, str(error))
     registry.save(str(MAPPINGS_FILE))
     log_event("info", {"message": f"Mapeamento '{mapping.point_id}' cadastrado"})
     return {"status": "ok", "point_id": mapping.point_id}
@@ -165,8 +152,8 @@ def add_mapping(mapping_in: MappingIn):
 def delete_mapping(point_id: str):
     try:
         registry.get(point_id)
-    except KeyError as e:
-        raise HTTPException(404, str(e))
+    except MappingNotFoundError as error:
+        raise HTTPException(404, str(error))
     registry.remove(point_id)
     registry.save(str(MAPPINGS_FILE))
     log_event("info", {"message": f"Mapeamento '{point_id}' removido"})
@@ -175,7 +162,10 @@ def delete_mapping(point_id: str):
 
 @app.get("/api/adapters")
 def list_adapters():
-    return {name: {"connected": a.connected} for name, a in adapters.items()}
+    return {
+        name: {"connected": adapter.connected, "circuit_state": adapter.circuit_state}
+        for name, adapter in adapters.items()
+    }
 
 
 @app.post("/api/adapters/{protocol}/connection")
@@ -192,14 +182,14 @@ def set_connection(protocol: str, req: ConnectionRequest):
 def convert(req: ConvertRequest):
     if req.source not in adapters:
         raise HTTPException(404, f"protocolo de origem '{req.source}' desconhecido")
-    unknown_targets = [t for t in req.targets if t not in adapters]
+    unknown_targets = [target for target in req.targets if target not in adapters]
     if unknown_targets:
         raise HTTPException(404, f"protocolo(s) de destino desconhecido(s): {unknown_targets}")
     try:
         report = engine.convert(req.point_id, req.source, req.targets)
-    except KeyError as e:
-        log_event("error", {"message": str(e), "point_id": req.point_id})
-        raise HTTPException(404, str(e))
+    except (MappingNotFoundError, BindingNotFoundError) as error:
+        log_event("error", {"message": str(error), "point_id": req.point_id})
+        raise HTTPException(404, str(error))
     return log_event("convert", report_to_dict(report))
 
 
@@ -228,15 +218,15 @@ def run_demo():
     )
     try:
         registry.add(bad)
-    except ValidationError as e:
-        results.append(log_event("error", {"message": f"Config inválida rejeitada: {e}"}))
+    except ValidationError as error:
+        results.append(log_event("error", {"message": f"Config inválida rejeitada: {error}"}))
 
     return results
 
 
 @app.get("/api/logs")
 def get_logs(limit: int = 50, since_id: int = 0):
-    entries = [e for e in LOG if e["id"] > since_id]
+    entries = [entry for entry in LOG if entry["id"] > since_id]
     return entries[-limit:]
 
 
@@ -246,7 +236,6 @@ def clear_logs():
     return {"status": "ok"}
 
 
-# Serve o frontend estático por último, para não sombrear as rotas /api/*
 FRONTEND_DIR = BASE_DIR / "frontend"
 FRONTEND_DIR.mkdir(parents=True, exist_ok=True)
 app.mount("/", StaticFiles(directory=str(FRONTEND_DIR), html=True), name="frontend")

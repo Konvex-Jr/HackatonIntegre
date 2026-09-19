@@ -37,16 +37,22 @@ tests.py        testes automatizados, via terminal
 
 ## Como rodar
 
-Requer só Python 3.9+ (biblioteca padrão, sem dependências externas).
+O núcleo (`gateway/`, `cli.py`, `tests.py`) requer só Python 3.9+ (biblioteca
+padrão, sem dependências externas). O backend HTTP (`api.py`), que serve o
+front-end web, usa FastAPI/uvicorn — instale com `pip install -r requirements.txt`.
 
 ```bash
-cd protocol_gateway
+cd HackatonIntegre
 
 # roda os 2 exemplos de fluxo + cenário de falha + config inválida, tudo de uma vez
 python3 cli.py demo
 
-# testes automatizados (17 verificações)
+# testes automatizados (27 verificações)
 python3 tests.py
+
+# opcional: sobe a API + front-end web em http://127.0.0.1:8000
+pip install -r requirements.txt
+python3 -m uvicorn api:app --reload
 ```
 
 ## Comandos da CLI
@@ -90,6 +96,27 @@ congelado no último bom conhecido, e cada destino reflete a falha do seu
 jeito (Modbus via convenção de coil, DNP3 via bit `COMM_LOST`, OPC UA via
 `StatusCode = Bad_CommunicationFailure`) — sem derrubar a conversão para
 os outros destinos.
+
+## Correções aplicadas nesta revisão
+
+- **`cli.py` não executava de jeito nenhum**: os arquivos `__init__.py` dos
+  subpacotes (`gateway/registry`, `gateway/adapters`, `gateway/engine`,
+  `gateway/domain`, `gateway/units`) estavam vazios, então
+  `from gateway.registry import MappingRegistry, ...` (usado por `cli.py`)
+  falhava com `ImportError`. Populados com os re-exports corretos.
+- **Teste `opcua: severidade do StatusCode` falhava**: o adaptador OPC UA
+  não expunha `status_code_severity` no payload publicado (apenas no
+  cenário de falha). Adicionado o mapeamento `Validity -> StatusCode`
+  (`GOOD→Good`, `QUESTIONABLE→Uncertain`, `INVALID→Bad`) tanto na
+  publicação normal quanto na de falha.
+- **`requirements.txt` ausente**: `api.py` depende de FastAPI/uvicorn/pydantic,
+  mas isso não estava listado em nenhum lugar (o README dizia "sem
+  dependências externas", o que só vale para o núcleo). Arquivo criado e
+  README atualizado.
+
+Após as correções: `python3 tests.py` → **27 passaram, 0 falharam**;
+`python3 cli.py demo` roda os 4 cenários sem erro; `uvicorn api:app` sobe
+normalmente e serve o front-end em `/`.
 
 ## Limitações conscientes (é um protótipo, não um produto)
 

@@ -4,12 +4,16 @@
     "bindings": {
       "mms": {
         "protocol": "mms",
-        "address": "SE01/MMXU1.PhV.phsA[MX]",
+        "address": "IED1/MMXU1$MX$PhV$phsA$cVal$mag$f",
         "data_type": "float",
         "unit": "kV",
         "scale": 1.0,
         "offset": 0.0,
-        "raw_value": 13.8
+        "raw_value": 13.8,
+        "native_validity": null,
+        "native_quality_flags": [],
+        "min_engineering": null,
+        "max_engineering": null
       },
       "modbus": {
         "protocol": "modbus",
@@ -18,7 +22,11 @@
         "unit": "kV",
         "scale": 0.1,
         "offset": 0.0,
-        "raw_value": null
+        "raw_value": null,
+        "native_validity": null,
+        "native_quality_flags": [],
+        "min_engineering": null,
+        "max_engineering": null
       }
     }
   },
@@ -30,9 +38,13 @@
         "address": "AI:12",
         "data_type": "float",
         "unit": "A",
-        "scale": 0.1,
+        "scale": 1.0,
         "offset": 0.0,
-        "raw_value": 5023
+        "raw_value": 502.3,
+        "native_validity": null,
+        "native_quality_flags": [],
+        "min_engineering": null,
+        "max_engineering": null
       },
       "opcua": {
         "protocol": "opcua",
@@ -41,7 +53,11 @@
         "unit": "A",
         "scale": 1.0,
         "offset": 0.0,
-        "raw_value": null
+        "raw_value": null,
+        "native_validity": null,
+        "native_quality_flags": [],
+        "min_engineering": null,
+        "max_engineering": null
       }
     }
   }
