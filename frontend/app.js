@@ -124,7 +124,6 @@
 
       var VIEW_INIT = {
         painel: initPainel,
-        dashboard: initDashboard,
         conversor: initConversor,
         mapeamentos: initMapeamentos,
         historico: initHistorico
@@ -187,6 +186,37 @@
           row.appendChild(el("span", { class: "bv", text: String(d.value) }));
           container.appendChild(row);
         });
+      }
+
+      function pieChart(container, data) {
+        container.innerHTML = "";
+        if (!data || !data.length) {
+          container.appendChild(el("div", { class: "chart-empty", text: "Sem eventos para os filtros atuais." }));
+          return;
+        }
+        var total = data.reduce(function (sum, item) { return sum + item.value; }, 0);
+        var angle = 0;
+        var stops = [];
+        data.forEach(function (item) {
+          var nextAngle = angle + (item.value / total) * 360;
+          stops.push((item.color || "var(--accent)") + " " + angle + "deg " + nextAngle + "deg");
+          angle = nextAngle;
+        });
+        var chart = el("div", { class: "pie-chart" });
+        chart.style.background = "conic-gradient(" + stops.join(", ") + ")";
+        chart.setAttribute("aria-label", "Distribuição dos eventos");
+        var center = el("span", { class: "pie-chart-total", text: String(total) });
+        chart.appendChild(center);
+        container.appendChild(chart);
+        var legend = el("div", { class: "pie-legend" });
+        data.forEach(function (item) {
+          legend.appendChild(el("div", { class: "pie-legend-item" }, [
+            el("span", { class: "pie-swatch", style: "background:" + (item.color || "var(--accent)") }),
+            el("span", { text: item.label }),
+            el("b", { text: String(item.value) })
+          ]));
+        });
+        container.appendChild(legend);
       }
 
       function chartBox(title, data) {
@@ -273,24 +303,20 @@
       function initPainel() {
         loadAdapters();
         loadPointsQuick();
-        activePolls.adapters = setInterval(loadAdapters, 5000);
-      }
-
-      function initDashboard() {
         loadDashboardSummary();
-        activePolls.dashboard = setInterval(loadDashboardSummary, 5000);
+        activePolls.adapters = setInterval(function () {
+          loadAdapters();
+          loadDashboardSummary();
+        }, 5000);
       }
 
       function loadDashboardSummary() {
         Promise.all([
           apiGet("/api/mappings"),
-          apiGet("/api/adapters"),
           apiGet("/api/logs?limit=300")
         ]).then(function (results) {
-          var mappings = results[0], adaptersInfo = results[1], logs = results[2];
+          var mappings = results[0], logs = results[1];
 
-          var connectedCount = Object.keys(adaptersInfo).filter(function (k) { return adaptersInfo[k].connected; }).length;
-          var openCircuits = Object.keys(adaptersInfo).filter(function (k) { return adaptersInfo[k].circuit_state === "open"; }).length;
           var conversionLogs = logs.filter(function (e) { return e.kind === "convert"; });
           var totalEvents = logs.length;
           var failedEvents = conversionLogs.filter(function (e) { return e.failure; }).length;
@@ -298,7 +324,17 @@
           var targetCount = 0;
           var preservedTargets = 0;
           var lossReasons = {};
+          var lossesByProtocol = {};
+          var lossesBySeverity = {};
+          var qualityFlags = {};
+          var eventStatuses = {};
+          var pointHealth = {};
           conversionLogs.forEach(function (entry) {
+            var point = entry.point_id || "(sem ponto)";
+            if (!pointHealth[point]) pointHealth[point] = { conversions: 0, failures: 0, losses: 0, last: entry };
+            pointHealth[point].conversions += 1;
+            pointHealth[point].last = entry;
+            if (entry.failure) pointHealth[point].failures += 1;
             Object.keys(entry.targets || {}).forEach(function (protocol) {
               var target = entry.targets[protocol];
               if (!target || target.error) return;
@@ -307,6 +343,9 @@
                 lossEvents += target.losses.length;
                 target.losses.forEach(function (loss) {
                   lossReasons[loss.code] = (lossReasons[loss.code] || 0) + 1;
+                  lossesByProtocol[protocol] = (lossesByProtocol[protocol] || 0) + 1;
+                  lossesBySeverity[loss.severity] = (lossesBySeverity[loss.severity] || 0) + 1;
+                  if (pointHealth[point]) pointHealth[point].losses += 1;
                 });
               } else {
                 preservedTargets += 1;
@@ -321,6 +360,15 @@
           }).length;
           var cleanConversions = conversionLogs.length - failedEvents - lossConversionCount;
 
+          logs.forEach(function (entry) {
+            var status = classifyEntry(entry);
+            eventStatuses[status] = (eventStatuses[status] || 0) + 1;
+            var quality = entry.canonical && entry.canonical.quality;
+            (quality && quality.flags ? quality.flags : []).forEach(function (flag) {
+              qualityFlags[flag] = (qualityFlags[flag] || 0) + 1;
+            });
+          });
+
           var grid = document.getElementById("dash-stats-grid");
           grid.innerHTML = "";
           function stat(label, value, sub) {
@@ -331,7 +379,6 @@
             ]));
           }
           stat("Pontos cadastrados", mappings.length);
-          stat("Adaptadores conectados", connectedCount + "/4", openCircuits ? openCircuits + " circuito(s) aberto(s)" : "todos operando");
           stat("Eventos na sessão", totalEvents, failedEvents ? failedEvents + " com falha de comunicação" : "sem falhas registradas");
           stat("Conversões realizadas", conversionLogs.length, totalEvents ? Math.round((conversionLogs.length / totalEvents) * 100) + "% dos eventos" : "");
           stat("Metadados preservados", preservedTargets, targetCount ? Math.round((preservedTargets / targetCount) * 100) + "% dos destinos" : "sem destinos avaliados");
@@ -349,11 +396,85 @@
           var kindData = Object.keys(byKind).map(function (k) { return { label: KIND_LABEL[k] || k, value: byKind[k], color: "var(--accent)" }; });
           barList(document.getElementById("dash-chart-eventkinds"), kindData);
 
+          pieChart(document.getElementById("dash-chart-status-pie"), Object.keys(eventStatuses).map(function (status) {
+            return { label: STATUS_META[status] ? STATUS_META[status].label : status, value: eventStatuses[status], color: STATUS_META[status] ? STATUS_META[status].color : "var(--accent)" };
+          }));
+
           var reasonData = Object.keys(lossReasons).map(function (code) {
             return { label: code, value: lossReasons[code], color: "var(--warn)" };
           }).sort(function (a, b) { return b.value - a.value; });
           barList(document.getElementById("dash-chart-loss-reasons"), reasonData);
+
+          barList(document.getElementById("dash-chart-loss-protocols"), Object.keys(lossesByProtocol).map(function (protocol) {
+            return { label: PROTO_LABEL[protocol] || protocol, value: lossesByProtocol[protocol], color: PROTO_COLOR[protocol] || "var(--warn)" };
+          }).sort(function (a, b) { return b.value - a.value; }));
+          barList(document.getElementById("dash-chart-loss-severity"), Object.keys(lossesBySeverity).map(function (severity) {
+            return { label: severity, value: lossesBySeverity[severity], color: severity === "error" ? "var(--bad)" : (severity === "warning" ? "var(--warn)" : "var(--info)") };
+          }).sort(function (a, b) { return b.value - a.value; }));
+          barList(document.getElementById("dash-chart-quality-flags"), Object.keys(qualityFlags).map(function (flag) {
+            return { label: flag, value: qualityFlags[flag], color: "var(--bad)" };
+          }).sort(function (a, b) { return b.value - a.value; }));
+          renderPointHealth(pointHealth);
+          renderRecentIncidents(logs);
         }).catch(function (err) { reportApiError(err, "Não foi possível carregar o resumo do painel."); });
+      }
+
+      function renderPointHealth(pointHealth) {
+        var wrap = document.getElementById("dash-point-health");
+        wrap.innerHTML = "";
+        var points = Object.keys(pointHealth);
+        if (!points.length) {
+          wrap.appendChild(el("div", { class: "empty-state", text: "Nenhuma conversão registrada para os pontos monitorados." }));
+          return;
+        }
+        var table = el("table", { class: "data" });
+        table.appendChild(el("thead", {}, [el("tr", {}, [
+          el("th", { text: "Ponto" }), el("th", { text: "Conversões" }), el("th", { text: "Falhas" }),
+          el("th", { text: "Perdas" }), el("th", { text: "Último estado" })
+        ])]));
+        var body = el("tbody");
+        points.sort(function (a, b) { return pointHealth[b].losses - pointHealth[a].losses; }).forEach(function (point) {
+          var health = pointHealth[point];
+          var status = health.failures ? "falha de comunicação" : (health.losses ? "com perda" : "normal");
+          var statusClass = health.failures ? "bad" : (health.losses ? "warn" : "good");
+          body.appendChild(el("tr", {}, [
+            el("td", { class: "pid", text: point }),
+            el("td", { class: "mono", text: String(health.conversions) }),
+            el("td", { class: "mono", text: String(health.failures) }),
+            el("td", { class: "mono", text: String(health.losses) }),
+            el("td", {}, [el("span", { class: "pill " + statusClass, text: status })])
+          ]));
+        });
+        table.appendChild(body);
+        wrap.appendChild(table);
+      }
+
+      function renderRecentIncidents(logs) {
+        var wrap = document.getElementById("dash-recent-incidents");
+        wrap.innerHTML = "";
+        var incidents = logs.filter(function (entry) {
+          return entry.kind === "error" || entry.failure || entryLossCount(entry) > 0;
+        }).slice(-8).reverse();
+        if (!incidents.length) {
+          wrap.appendChild(el("div", { class: "empty-state", text: "Nenhuma ocorrência crítica registrada." }));
+          return;
+        }
+        var table = el("table", { class: "data" });
+        table.appendChild(el("thead", {}, [el("tr", {}, [
+          el("th", { text: "Horário" }), el("th", { text: "Ponto / evento" }), el("th", { text: "Origem" }), el("th", { text: "Diagnóstico" })
+        ])]));
+        var body = el("tbody");
+        incidents.forEach(function (entry) {
+          var diagnosis = entry.failure || (entry.kind === "error" ? entry.message : entryLossCount(entry) + " perda(s) de metadado");
+          body.appendChild(el("tr", {}, [
+            el("td", { class: "mono", text: fmtTime(entry.logged_at) }),
+            el("td", { class: "pid", text: entry.point_id || entry.message || "Evento do sistema" }),
+            el("td", { text: PROTO_LABEL[entry.source_protocol] || entry.source_protocol || "Sistema" }),
+            el("td", { text: diagnosis })
+          ]));
+        });
+        table.appendChild(body);
+        wrap.appendChild(table);
       }
 
       function loadAdapters() {

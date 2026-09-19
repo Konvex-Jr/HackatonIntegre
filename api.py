@@ -244,4 +244,6 @@ def clear_logs():
 
 FRONTEND_DIR = BASE_DIR / "frontend"
 FRONTEND_DIR.mkdir(parents=True, exist_ok=True)
+ASSETS_DIR = BASE_DIR / "assets"
+app.mount("/assets", StaticFiles(directory=str(ASSETS_DIR)), name="assets")
 app.mount("/", StaticFiles(directory=str(FRONTEND_DIR), html=True), name="frontend")

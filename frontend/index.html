@@ -5,8 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Gateway Semântico Multiprotocolo</title>
-  <link rel="icon"
-    href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22><rect width=%2216%22 height=%2216%22 fill=%22%230B131C%22/><path d=%22M2 8h3l1.5-4 3 8L11 8h3%22 stroke=%22%234FD1C5%22 stroke-width=%221.4%22 fill=%22none%22/></svg>">
+  <link rel="icon" type="image/png" href="../assets/images/logo_weg.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link
@@ -20,10 +19,7 @@
   <div class="topbar">
     <div class="brand">
       <span class="brand-mark">
-        <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M2 8h3l1.5-4 3 8L11 8h3" stroke="#4FD1C5" stroke-width="1.4" stroke-linecap="round"
-            stroke-linejoin="round" />
-        </svg>
+        <img src="../assets/images/logo_weg.png" alt="WEG">
       </span>
       <span class="brand-text">
         <b>Gateway Semântico</b>
@@ -32,7 +28,6 @@
     </div>
     <nav class="tabs" role="tablist" aria-label="Seções">
       <button class="tab" data-view="painel" role="tab">Painel</button>
-      <button class="tab" data-view="dashboard" role="tab">Dashboard</button>
       <button class="tab" data-view="conversor" role="tab">Conversor</button>
       <button class="tab" data-view="mapeamentos" role="tab">Mapeamentos</button>
       <button class="tab" data-view="historico" role="tab">Histórico</button>
@@ -61,24 +56,18 @@
         <span class="hint-line" id="demo-feedback"></span>
       </div>
 
+      <!-- ================= DASHBOARD ================= -->
       <div class="panel">
-        <h2>Pontos cadastrados <small id="points-count"></small></h2>
-        <div class="grid cols-3" id="points-quick-grid"></div>
-      </div>
-    </section>
-
-    <!-- ================= DASHBOARD ================= -->
-    <section class="view" id="view-dashboard">
-      <h1 class="page-title">Dashboard administrativo</h1>
-      <p class="page-sub">Indicadores operacionais da subestação: conversões, preservação de metadados, perdas e motivos das ocorrências.</p>
-
-      <div class="panel">
-        <h2>Resumo &amp; indicadores <small>atualização automática a cada 5 segundos</small></h2>
+        <h2>Dashboard administrativo <small>atualização automática a cada 5 segundos</small></h2>
         <div class="grid cols-4" id="dash-stats-grid" style="margin-bottom:14px;"></div>
         <div class="grid cols-2">
           <div class="chart-box">
             <h3>Protocolos em uso nos pontos cadastrados</h3>
             <div id="dash-chart-protocols"></div>
+          </div>
+          <div class="chart-box">
+            <h3>Distribuição dos eventos</h3>
+            <div id="dash-chart-status-pie" class="pie-chart-wrap"></div>
           </div>
           <div class="chart-box">
             <h3>Eventos por tipo (sessão atual)</h3>
@@ -89,6 +78,39 @@
             <div id="dash-chart-loss-reasons"></div>
           </div>
         </div>
+      </div>
+
+      <div class="panel">
+        <h2>Diagnóstico de perdas <small>onde e por que os metadados foram afetados</small></h2>
+        <div class="grid cols-3">
+          <div class="chart-box">
+            <h3>Perdas por destino</h3>
+            <div id="dash-chart-loss-protocols"></div>
+          </div>
+          <div class="chart-box">
+            <h3>Perdas por severidade</h3>
+            <div id="dash-chart-loss-severity"></div>
+          </div>
+          <div class="chart-box">
+            <h3>Flags de qualidade observadas</h3>
+            <div id="dash-chart-quality-flags"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Saúde dos pontos <small>impacto acumulado por ponto monitorado</small></h2>
+        <div id="dash-point-health"></div>
+      </div>
+
+      <div class="panel">
+        <h2>Ocorrências recentes <small>falhas e perdas que exigem atenção</small></h2>
+        <div id="dash-recent-incidents"></div>
+      </div>
+
+      <div class="panel">
+        <h2>Pontos cadastrados <small id="points-count"></small></h2>
+        <div class="grid cols-3" id="points-quick-grid"></div>
       </div>
     </section>
 
