@@ -22,7 +22,12 @@
           "logical_device": "LD0",
           "logical_node": "MMXU1",
           "data_object": "PhV",
-          "data_attributes": ["phsA", "cVal", "mag", "f"],
+          "data_attributes": [
+            "phsA",
+            "cVal",
+            "mag",
+            "f"
+          ],
           "functional_constraint": "MX"
         }
       },
@@ -120,7 +125,11 @@
           "logical_device": "LD0",
           "logical_node": "MMXU1",
           "data_object": "A",
-          "data_attributes": ["phsA", "mag", "f"],
+          "data_attributes": [
+            "phsA",
+            "mag",
+            "f"
+          ],
           "functional_constraint": "MX"
         }
       },

@@ -1,1243 +1,2599 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Gateway Semântico Multiprotocolo</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22><rect width=%2216%22 height=%2216%22 fill=%22%230B131C%22/><path d=%22M2 8h3l1.5-4 3 8L11 8h3%22 stroke=%22%234FD1C5%22 stroke-width=%221.4%22 fill=%22none%22/></svg>">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<style>
-  :root{
-    --bg:#0B131C;
-    --bg-grid: rgba(79,209,197,0.035);
-    --panel:#121D29;
-    --panel-2:#17232F;
-    --panel-3:#0E1620;
-    --border:#223243;
-    --border-soft:#1A2733;
-    --text:#E7EEF4;
-    --text-dim:#93A6B8;
-    --text-faint:#5D7186;
-    --accent:#4FD1C5;
-    --accent-strong:#2FB8AB;
-    --accent-dim:rgba(79,209,197,0.14);
-    --good:#3ED598;
-    --good-dim:rgba(62,213,152,0.14);
-    --warn:#F2B84B;
-    --warn-dim:rgba(242,184,75,0.14);
-    --bad:#F2545B;
-    --bad-dim:rgba(242,84,91,0.14);
-    --info:#5B9EF2;
-    --info-dim:rgba(91,158,242,0.14);
-    --off:#4B5A69;
-    --off-dim:rgba(75,90,105,0.18);
-    --radius:3px;
-    --font-ui:'IBM Plex Sans', system-ui, sans-serif;
-    --font-mono:'IBM Plex Mono', 'SF Mono', Consolas, monospace;
-  }
-  *{box-sizing:border-box;}
-  html,body{margin:0;padding:0;}
-  body{
-    background:
-      linear-gradient(var(--bg-grid) 1px, transparent 1px) 0 0/100% 28px,
-      var(--bg);
-    color:var(--text);
-    font-family:var(--font-ui);
-    font-size:14px;
-    line-height:1.5;
-    min-height:100vh;
-  }
-  ::selection{background:var(--accent-dim); color:var(--text);}
-  :focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
-  button, input, select{font-family:inherit; font-size:inherit; color:inherit;}
-  a{color:var(--accent);}
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gateway Semântico Multiprotocolo</title>
+  <link rel="icon"
+    href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22><rect width=%2216%22 height=%2216%22 fill=%22%230B131C%22/><path d=%22M2 8h3l1.5-4 3 8L11 8h3%22 stroke=%22%234FD1C5%22 stroke-width=%221.4%22 fill=%22none%22/></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
+    rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0B131C;
+      --bg-grid: rgba(79, 209, 197, 0.035);
+      --panel: #121D29;
+      --panel-2: #17232F;
+      --panel-3: #0E1620;
+      --border: #223243;
+      --border-soft: #1A2733;
+      --text: #E7EEF4;
+      --text-dim: #93A6B8;
+      --text-faint: #5D7186;
+      --accent: #4FD1C5;
+      --accent-strong: #2FB8AB;
+      --accent-dim: rgba(79, 209, 197, 0.14);
+      --good: #3ED598;
+      --good-dim: rgba(62, 213, 152, 0.14);
+      --warn: #F2B84B;
+      --warn-dim: rgba(242, 184, 75, 0.14);
+      --bad: #F2545B;
+      --bad-dim: rgba(242, 84, 91, 0.14);
+      --info: #5B9EF2;
+      --info-dim: rgba(91, 158, 242, 0.14);
+      --off: #4B5A69;
+      --off-dim: rgba(75, 90, 105, 0.18);
+      --radius: 3px;
+      --font-ui: 'IBM Plex Sans', system-ui, sans-serif;
+      --font-mono: 'IBM Plex Mono', 'SF Mono', Consolas, monospace;
+    }
 
-  /* ---------- layout shell ---------- */
-  .topbar{
-    position:sticky; top:0; z-index:30;
-    display:flex; align-items:center; gap:20px;
-    padding:14px 22px;
-    background:rgba(11,19,28,0.92);
-    backdrop-filter:blur(6px);
-    border-bottom:1px solid var(--border);
-  }
-  .brand{display:flex; align-items:center; gap:10px; margin-right:8px;}
-  .brand-mark{
-    width:26px; height:26px; flex:none;
-    border:1px solid var(--accent); border-radius:2px;
-    display:flex; align-items:center; justify-content:center;
-  }
-  .brand-mark svg{width:16px; height:16px; display:block;}
-  .brand-text{display:flex; flex-direction:column; line-height:1.15;}
-  .brand-text b{font-size:14px; font-weight:600; letter-spacing:.2px;}
-  .brand-text span{font-size:11px; color:var(--text-faint); font-family:var(--font-mono);}
+    * {
+      box-sizing: border-box;
+    }
 
-  .tabs{display:flex; gap:4px; flex:1;}
-  .tab{
-    appearance:none; border:1px solid transparent; background:transparent;
-    color:var(--text-dim); padding:7px 14px; border-radius:var(--radius);
-    cursor:pointer; font-weight:500; font-size:13.5px;
-    transition:color .12s, background-color .12s, border-color .12s;
-  }
-  .tab:hover{color:var(--text); background:var(--panel-2);}
-  .tab.active{color:var(--bg); background:var(--accent); font-weight:600;}
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+    }
 
-  .btn-help{
-    appearance:none; border:1px solid var(--border); background:var(--panel);
-    color:var(--text-dim); padding:7px 12px; border-radius:var(--radius);
-    cursor:pointer; font-size:13px; white-space:nowrap;
-  }
-  .btn-help:hover{color:var(--text); border-color:var(--accent);}
+    body {
+      background:
+        linear-gradient(var(--bg-grid) 1px, transparent 1px) 0 0/100% 28px,
+        var(--bg);
+      color: var(--text);
+      font-family: var(--font-ui);
+      font-size: 14px;
+      line-height: 1.5;
+      min-height: 100vh;
+    }
 
-  main{max-width:1180px; margin:0 auto; padding:26px 22px 80px;}
+    ::selection {
+      background: var(--accent-dim);
+      color: var(--text);
+    }
 
-  .view{display:none;}
-  .view.active{display:block; animation:reveal .18s ease-out;}
-  @keyframes reveal{from{opacity:0; transform:translateY(3px);} to{opacity:1; transform:none;}}
-  @media (prefers-reduced-motion: reduce){ .view.active{animation:none;} }
+    :focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
 
-  h1.page-title{font-size:19px; margin:0 0 4px; font-weight:600;}
-  p.page-sub{margin:0 0 22px; color:var(--text-dim); font-size:13.5px; max-width:62ch;}
+    button,
+    input,
+    select {
+      font-family: inherit;
+      font-size: inherit;
+      color: inherit;
+    }
 
-  .panel{
-    background:var(--panel); border:1px solid var(--border);
-    border-radius:var(--radius); padding:18px;
-  }
-  .panel + .panel{margin-top:16px;}
-  .panel h2{font-size:13px; margin:0 0 14px; font-weight:600; text-transform:none;
-    color:var(--text); display:flex; align-items:center; justify-content:space-between; gap:10px;}
-  .panel h2 small{font-weight:400; color:var(--text-faint); font-size:12px;}
+    a {
+      color: var(--accent);
+    }
 
-  .grid{display:grid; gap:12px;}
-  .grid.cols-4{grid-template-columns:repeat(4, 1fr);}
-  .grid.cols-3{grid-template-columns:repeat(3, 1fr);}
-  .grid.cols-2{grid-template-columns:repeat(2, 1fr);}
-  @media (max-width:900px){
-    .grid.cols-4{grid-template-columns:repeat(2, 1fr);}
-    .grid.cols-3{grid-template-columns:repeat(2, 1fr);}
-  }
-  @media (max-width:600px){
-    .grid.cols-4, .grid.cols-3, .grid.cols-2{grid-template-columns:1fr;}
-    main{padding:18px 14px 70px;}
-    .topbar{padding:12px 14px; flex-wrap:wrap;}
-    .tabs{order:3; flex:1 1 100%; overflow-x:auto; margin-top:2px;}
-  }
+    /* ---------- layout shell ---------- */
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 30;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      padding: 14px 22px;
+      background: rgba(11, 19, 28, 0.92);
+      backdrop-filter: blur(6px);
+      border-bottom: 1px solid var(--border);
+    }
 
-  /* ---------- buttons ---------- */
-  .btn{
-    appearance:none; border:1px solid var(--border); background:var(--panel-2);
-    color:var(--text); padding:9px 16px; border-radius:var(--radius);
-    font-weight:600; font-size:13.5px; cursor:pointer;
-    display:inline-flex; align-items:center; gap:8px;
-    transition:border-color .12s, background-color .12s;
-  }
-  .btn:hover{border-color:var(--accent);}
-  .btn:disabled{opacity:.45; cursor:not-allowed;}
-  .btn-primary{background:var(--accent); border-color:var(--accent); color:#08211E;}
-  .btn-primary:hover{background:var(--accent-strong); border-color:var(--accent-strong);}
-  .btn-danger{color:var(--bad); border-color:var(--border);}
-  .btn-danger:hover{border-color:var(--bad); background:var(--bad-dim);}
-  .btn-ghost{background:transparent; border-color:transparent; color:var(--text-dim); padding:6px 10px;}
-  .btn-ghost:hover{color:var(--text); background:var(--panel-2);}
-  .btn-sm{padding:6px 11px; font-size:12.5px;}
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-right: 8px;
+    }
 
-  code, .mono{font-family:var(--font-mono);}
+    .brand-mark {
+      width: 26px;
+      height: 26px;
+      flex: none;
+      border: 1px solid var(--accent);
+      border-radius: 2px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
 
-  /* ---------- status / badges ---------- */
-  .dot{width:7px; height:7px; border-radius:50%; display:inline-block; flex:none;}
-  .dot.good{background:var(--good); box-shadow:0 0 0 3px var(--good-dim);}
-  .dot.warn{background:var(--warn); box-shadow:0 0 0 3px var(--warn-dim);}
-  .dot.bad{background:var(--bad); box-shadow:0 0 0 3px var(--bad-dim);}
-  .dot.off{background:var(--off); box-shadow:0 0 0 3px var(--off-dim);}
+    .brand-mark svg {
+      width: 16px;
+      height: 16px;
+      display: block;
+    }
 
-  .pill{
-    display:inline-flex; align-items:center; gap:6px;
-    padding:3px 9px; border-radius:100px; font-size:11.5px; font-weight:600;
-    letter-spacing:.2px; border:1px solid transparent;
-  }
-  .pill.good{background:var(--good-dim); color:var(--good);}
-  .pill.warn{background:var(--warn-dim); color:var(--warn);}
-  .pill.bad{background:var(--bad-dim); color:var(--bad);}
-  .pill.info{background:var(--info-dim); color:var(--info);}
-  .pill.off{background:var(--off-dim); color:var(--text-dim);}
+    .brand-text {
+      display: flex;
+      flex-direction: column;
+      line-height: 1.15;
+    }
 
-  .badge-proto{
-    font-family:var(--font-mono); font-size:11.5px; padding:3px 8px;
-    border:1px solid var(--border); border-radius:var(--radius); color:var(--text-dim);
-    background:var(--panel-3);
-  }
+    .brand-text b {
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: .2px;
+    }
 
-  /* ---------- adapter cards (painel) ---------- */
-  .adapter-card{
-    background:var(--panel-2); border:1px solid var(--border); border-radius:var(--radius);
-    padding:14px; display:flex; flex-direction:column; gap:10px;
-  }
-  .adapter-card .row-top{display:flex; align-items:center; justify-content:space-between;}
-  .adapter-card .proto-name{font-weight:600; font-size:14.5px;}
-  .adapter-card .proto-full{font-size:11.5px; color:var(--text-faint); font-family:var(--font-mono);}
-  .switch{position:relative; width:36px; height:20px; flex:none;}
-  .switch input{position:absolute; inset:0; opacity:0; margin:0; cursor:pointer; z-index:1;}
-  .switch .track{
-    position:absolute; inset:0; background:var(--off); border-radius:100px; transition:background .15s;
-    pointer-events:none;
-  }
-  .switch .thumb{
-    position:absolute; top:2px; left:2px; width:16px; height:16px; border-radius:50%;
-    background:#0B131C; transition:transform .15s; pointer-events:none;
-  }
-  .switch input:checked + .track{background:var(--good);}
-  .switch input:checked + .track .thumb{transform:translateX(16px);}
-  .switch input:checked ~ .thumb{transform:translateX(16px);}
+    .brand-text span {
+      font-size: 11px;
+      color: var(--text-faint);
+      font-family: var(--font-mono);
+    }
 
-  /* ---------- quick point cards ---------- */
-  .point-card{
-    background:var(--panel-2); border:1px solid var(--border); border-radius:var(--radius);
-    padding:12px 14px; cursor:pointer; text-align:left; width:100%;
-    display:flex; flex-direction:column; gap:8px; color:var(--text);
-  }
-  .point-card:hover{border-color:var(--accent);}
-  .point-card .pid{font-family:var(--font-mono); font-size:13px; font-weight:600; word-break:break-all;}
-  .point-card .protos{display:flex; gap:6px; flex-wrap:wrap;}
+    .tabs {
+      display: flex;
+      gap: 4px;
+      flex: 1;
+    }
 
-  /* ---------- forms ---------- */
-  label.field{display:flex; flex-direction:column; gap:5px; font-size:12.5px; color:var(--text-dim);}
-  label.field span.lbl{color:var(--text-dim);}
-  input[type=text], input[type=number], select, textarea{
-    background:var(--panel-3); border:1px solid var(--border); border-radius:var(--radius);
-    padding:8px 10px; color:var(--text); width:100%;
-  }
-  input:focus, select:focus, textarea:focus{border-color:var(--accent);}
-  .checkline{display:flex; align-items:center; gap:7px; font-size:12.5px; color:var(--text-dim);}
-  .checkline input{accent-color:var(--accent);}
-  fieldset{border:1px dashed var(--border); border-radius:var(--radius); padding:14px; margin:0;}
-  legend{padding:0 6px; font-family:var(--font-mono); font-size:12px; color:var(--accent);}
+    .tab {
+      appearance: none;
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--text-dim);
+      padding: 7px 14px;
+      border-radius: var(--radius);
+      cursor: pointer;
+      font-weight: 500;
+      font-size: 13.5px;
+      transition: color .12s, background-color .12s, border-color .12s;
+    }
 
-  /* ---------- chip select (conversor) ---------- */
-  .chip{
-    appearance:none; border:1px solid var(--border); background:var(--panel-2);
-    color:var(--text-dim); padding:8px 13px; border-radius:var(--radius);
-    cursor:pointer; font-size:13px; font-family:var(--font-mono);
-    display:inline-flex; align-items:center; gap:7px;
-  }
-  .chip:hover{border-color:var(--accent);}
-  .chip.selected{border-color:var(--accent); color:var(--text); background:var(--accent-dim);}
-  .chip.disabled{opacity:.4; cursor:not-allowed;}
-  .chip .hint{font-size:10.5px; color:var(--text-faint); font-family:var(--font-ui);}
+    .tab:hover {
+      color: var(--text);
+      background: var(--panel-2);
+    }
 
-  /* ---------- result / report blocks ---------- */
-  .canon-block{
-    display:grid; grid-template-columns:repeat(4,1fr); gap:14px;
-    background:var(--panel-3); border:1px solid var(--border-soft); border-radius:var(--radius);
-    padding:14px 16px; margin-bottom:14px;
-  }
-  @media (max-width:700px){.canon-block{grid-template-columns:repeat(2,1fr);}}
-  .canon-block .kv span.k{display:block; font-size:10.5px; text-transform:uppercase; letter-spacing:.5px; color:var(--text-faint); margin-bottom:3px;}
-  .canon-block .kv span.v{font-family:var(--font-mono); font-size:14px;}
+    .tab.active {
+      color: var(--bg);
+      background: var(--accent);
+      font-weight: 600;
+    }
 
-  .failure-banner{
-    display:flex; gap:10px; align-items:flex-start;
-    background:var(--bad-dim); border:1px solid var(--bad); border-radius:var(--radius);
-    padding:11px 14px; margin-bottom:14px; font-size:13px; color:var(--text);
-  }
-  .failure-banner b{color:var(--bad);}
+    .btn-help {
+      appearance: none;
+      border: 1px solid var(--border);
+      background: var(--panel);
+      color: var(--text-dim);
+      padding: 7px 12px;
+      border-radius: var(--radius);
+      cursor: pointer;
+      font-size: 13px;
+      white-space: nowrap;
+    }
 
-  .target-card{
-    border:1px solid var(--border); border-radius:var(--radius); background:var(--panel-2);
-    padding:13px 14px; margin-bottom:10px;
-  }
-  .target-card .th{display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;}
-  .target-card .th .proto{font-weight:600; font-family:var(--font-mono);}
-  .target-card .addr{font-size:12px; color:var(--text-dim); font-family:var(--font-mono); margin-bottom:8px;}
-  .target-card .written{font-size:15px; font-family:var(--font-mono); margin-bottom:8px;}
-  .target-card.errored{border-color:var(--bad); background:var(--bad-dim);}
+    .btn-help:hover {
+      color: var(--text);
+      border-color: var(--accent);
+    }
 
-  .loss-row{
-    display:flex; gap:9px; align-items:flex-start;
-    padding:8px 10px; border-radius:var(--radius); font-size:12.5px; margin-top:6px;
-    border:1px solid transparent;
-  }
-  .loss-row.info{background:var(--info-dim); border-color:rgba(91,158,242,.35); color:var(--text);}
-  .loss-row.warning{background:var(--warn-dim); border-color:rgba(242,184,75,.35); color:var(--text);}
-  .loss-row.error{background:var(--bad-dim); border-color:rgba(242,84,91,.35); color:var(--text);}
-  .loss-row .code{font-family:var(--font-mono); font-weight:600; white-space:nowrap;}
-  .no-loss{font-size:12.5px; color:var(--good); display:flex; align-items:center; gap:7px; margin-top:2px;}
+    main {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 26px 22px 80px;
+    }
 
-  /* ---------- table (mapeamentos) ---------- */
-  table.data{width:100%; border-collapse:collapse; font-size:13px;}
-  table.data th{text-align:left; color:var(--text-faint); font-weight:600; font-size:11px;
-    text-transform:uppercase; letter-spacing:.4px; padding:0 10px 8px; border-bottom:1px solid var(--border);}
-  table.data td{padding:10px; border-bottom:1px solid var(--border-soft); vertical-align:top;}
-  table.data tr.clickable{cursor:pointer;}
-  table.data tr.clickable:hover td{background:var(--panel-2);}
-  table.data td.pid{font-family:var(--font-mono);}
+    .view {
+      display: none;
+    }
 
-  .binding-block{
-    border:1px solid var(--border); border-radius:var(--radius); padding:14px; margin-bottom:12px; background:var(--panel-3);
-  }
-  .binding-block .bh{display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;}
+    .view.active {
+      display: block;
+      animation: reveal .18s ease-out;
+    }
 
-  .empty-state{
-    text-align:center; padding:40px 20px; color:var(--text-faint); border:1px dashed var(--border);
-    border-radius:var(--radius);
-  }
+    @keyframes reveal {
+      from {
+        opacity: 0;
+        transform: translateY(3px);
+      }
 
-  /* ---------- history ---------- */
-  .log-item{border:1px solid var(--border); border-radius:var(--radius); margin-bottom:9px; overflow:hidden; background:var(--panel-2);}
-  .log-head{display:flex; align-items:center; gap:10px; padding:11px 14px; cursor:pointer;}
-  .log-head:hover{background:var(--panel-3);}
-  .log-head .pid{font-family:var(--font-mono); font-weight:600; flex:1;}
-  .log-head .ts{font-size:11.5px; color:var(--text-faint); font-family:var(--font-mono); white-space:nowrap;}
-  .log-body{padding:0 14px 14px; border-top:1px solid var(--border-soft); display:none;}
-  .log-body.open{display:block; padding-top:12px;}
-  .log-item.kind-info .log-head, .log-item.kind-error .log-head{cursor:default;}
-  .log-item.kind-error{border-color:var(--bad);}
+      to {
+        opacity: 1;
+        transform: none;
+      }
+    }
 
-  /* ---------- toast ---------- */
-  #toast-region{position:fixed; right:18px; bottom:18px; z-index:100; display:flex; flex-direction:column; gap:8px; max-width:360px;}
-  .toast{
-    background:var(--panel-2); border:1px solid var(--border); border-left:3px solid var(--accent);
-    color:var(--text); padding:11px 14px; border-radius:var(--radius); font-size:13px;
-    box-shadow:0 6px 18px rgba(0,0,0,.35);
-  }
-  .toast.error{border-left-color:var(--bad);}
-  .toast.success{border-left-color:var(--good);}
+    @media (prefers-reduced-motion: reduce) {
+      .view.active {
+        animation: none;
+      }
+    }
 
-  /* ---------- modal ---------- */
-  .modal-backdrop{
-    position:fixed; inset:0; background:rgba(5,9,13,.7); z-index:50;
-    display:none; align-items:flex-start; justify-content:center; padding:8vh 16px;
-  }
-  .modal-backdrop.open{display:flex;}
-  .modal{
-    background:var(--panel); border:1px solid var(--border); border-radius:var(--radius);
-    max-width:560px; width:100%; padding:22px 24px; max-height:78vh; overflow:auto;
-  }
-  .modal h3{margin:0 0 12px; font-size:16px;}
-  .modal p{color:var(--text-dim); font-size:13.5px; margin:0 0 10px;}
-  .modal .close-row{display:flex; justify-content:flex-end; margin-top:16px;}
+    h1.page-title {
+      font-size: 19px;
+      margin: 0 0 4px;
+      font-weight: 600;
+    }
 
-  .field-error{color:var(--bad); font-size:12.5px; margin-top:8px; padding:9px 11px; background:var(--bad-dim); border-radius:var(--radius); border:1px solid var(--bad);}
-  .hint-line{font-size:12px; color:var(--text-faint); margin-top:4px;}
-</style>
+    p.page-sub {
+      margin: 0 0 22px;
+      color: var(--text-dim);
+      font-size: 13.5px;
+      max-width: 62ch;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px;
+    }
+
+    .panel+.panel {
+      margin-top: 16px;
+    }
+
+    .panel h2 {
+      font-size: 13px;
+      margin: 0 0 14px;
+      font-weight: 600;
+      text-transform: none;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .panel h2 small {
+      font-weight: 400;
+      color: var(--text-faint);
+      font-size: 12px;
+    }
+
+    .grid {
+      display: grid;
+      gap: 12px;
+    }
+
+    .grid.cols-4 {
+      grid-template-columns: repeat(4, 1fr);
+    }
+
+    .grid.cols-3 {
+      grid-template-columns: repeat(3, 1fr);
+    }
+
+    .grid.cols-2 {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    @media (max-width:900px) {
+      .grid.cols-4 {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .grid.cols-3 {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width:600px) {
+
+      .grid.cols-4,
+      .grid.cols-3,
+      .grid.cols-2 {
+        grid-template-columns: 1fr;
+      }
+
+      main {
+        padding: 18px 14px 70px;
+      }
+
+      .topbar {
+        padding: 12px 14px;
+        flex-wrap: wrap;
+      }
+
+      .tabs {
+        order: 3;
+        flex: 1 1 100%;
+        overflow-x: auto;
+        margin-top: 2px;
+      }
+    }
+
+    /* ---------- buttons ---------- */
+    .btn {
+      appearance: none;
+      border: 1px solid var(--border);
+      background: var(--panel-2);
+      color: var(--text);
+      padding: 9px 16px;
+      border-radius: var(--radius);
+      font-weight: 600;
+      font-size: 13.5px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: border-color .12s, background-color .12s;
+    }
+
+    .btn:hover {
+      border-color: var(--accent);
+    }
+
+    .btn:disabled {
+      opacity: .45;
+      cursor: not-allowed;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #08211E;
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-strong);
+      border-color: var(--accent-strong);
+    }
+
+    .btn-danger {
+      color: var(--bad);
+      border-color: var(--border);
+    }
+
+    .btn-danger:hover {
+      border-color: var(--bad);
+      background: var(--bad-dim);
+    }
+
+    .btn-ghost {
+      background: transparent;
+      border-color: transparent;
+      color: var(--text-dim);
+      padding: 6px 10px;
+    }
+
+    .btn-ghost:hover {
+      color: var(--text);
+      background: var(--panel-2);
+    }
+
+    .btn-sm {
+      padding: 6px 11px;
+      font-size: 12.5px;
+    }
+
+    code,
+    .mono {
+      font-family: var(--font-mono);
+    }
+
+    /* ---------- status / badges ---------- */
+    .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      display: inline-block;
+      flex: none;
+    }
+
+    .dot.good {
+      background: var(--good);
+      box-shadow: 0 0 0 3px var(--good-dim);
+    }
+
+    .dot.warn {
+      background: var(--warn);
+      box-shadow: 0 0 0 3px var(--warn-dim);
+    }
+
+    .dot.bad {
+      background: var(--bad);
+      box-shadow: 0 0 0 3px var(--bad-dim);
+    }
+
+    .dot.off {
+      background: var(--off);
+      box-shadow: 0 0 0 3px var(--off-dim);
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 9px;
+      border-radius: 100px;
+      font-size: 11.5px;
+      font-weight: 600;
+      letter-spacing: .2px;
+      border: 1px solid transparent;
+    }
+
+    .pill.good {
+      background: var(--good-dim);
+      color: var(--good);
+    }
+
+    .pill.warn {
+      background: var(--warn-dim);
+      color: var(--warn);
+    }
+
+    .pill.bad {
+      background: var(--bad-dim);
+      color: var(--bad);
+    }
+
+    .pill.info {
+      background: var(--info-dim);
+      color: var(--info);
+    }
+
+    .pill.off {
+      background: var(--off-dim);
+      color: var(--text-dim);
+    }
+
+    .badge-proto {
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      padding: 3px 8px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text-dim);
+      background: var(--panel-3);
+    }
+
+    /* ---------- adapter cards (painel) ---------- */
+    .adapter-card {
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .adapter-card .row-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .adapter-card .proto-name {
+      font-weight: 600;
+      font-size: 14.5px;
+    }
+
+    .adapter-card .proto-full {
+      font-size: 11.5px;
+      color: var(--text-faint);
+      font-family: var(--font-mono);
+    }
+
+    .switch {
+      position: relative;
+      width: 36px;
+      height: 20px;
+      flex: none;
+    }
+
+    .switch input {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      margin: 0;
+      cursor: pointer;
+      z-index: 1;
+    }
+
+    .switch .track {
+      position: absolute;
+      inset: 0;
+      background: var(--off);
+      border-radius: 100px;
+      transition: background .15s;
+      pointer-events: none;
+    }
+
+    .switch .thumb {
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #0B131C;
+      transition: transform .15s;
+      pointer-events: none;
+    }
+
+    .switch input:checked+.track {
+      background: var(--good);
+    }
+
+    .switch input:checked+.track .thumb {
+      transform: translateX(16px);
+    }
+
+    .switch input:checked~.thumb {
+      transform: translateX(16px);
+    }
+
+    /* ---------- quick point cards ---------- */
+    .point-card {
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 14px;
+      cursor: pointer;
+      text-align: left;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      color: var(--text);
+    }
+
+    .point-card:hover {
+      border-color: var(--accent);
+    }
+
+    .point-card .pid {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      font-weight: 600;
+      word-break: break-all;
+    }
+
+    .point-card .protos {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    /* ---------- forms ---------- */
+    label.field {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      font-size: 12.5px;
+      color: var(--text-dim);
+    }
+
+    label.field span.lbl {
+      color: var(--text-dim);
+    }
+
+    input[type=text],
+    input[type=number],
+    select,
+    textarea {
+      background: var(--panel-3);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 8px 10px;
+      color: var(--text);
+      width: 100%;
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+      border-color: var(--accent);
+    }
+
+    .checkline {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 12.5px;
+      color: var(--text-dim);
+    }
+
+    .checkline input {
+      accent-color: var(--accent);
+    }
+
+    fieldset {
+      border: 1px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 14px;
+      margin: 0;
+    }
+
+    legend {
+      padding: 0 6px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--accent);
+    }
+
+    /* ---------- chip select (conversor) ---------- */
+    .chip {
+      appearance: none;
+      border: 1px solid var(--border);
+      background: var(--panel-2);
+      color: var(--text-dim);
+      padding: 8px 13px;
+      border-radius: var(--radius);
+      cursor: pointer;
+      font-size: 13px;
+      font-family: var(--font-mono);
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .chip:hover {
+      border-color: var(--accent);
+    }
+
+    .chip.selected {
+      border-color: var(--accent);
+      color: var(--text);
+      background: var(--accent-dim);
+    }
+
+    .chip.disabled {
+      opacity: .4;
+      cursor: not-allowed;
+    }
+
+    .chip .hint {
+      font-size: 10.5px;
+      color: var(--text-faint);
+      font-family: var(--font-ui);
+    }
+
+    /* ---------- result / report blocks ---------- */
+    .canon-block {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+      background: var(--panel-3);
+      border: 1px solid var(--border-soft);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      margin-bottom: 14px;
+    }
+
+    @media (max-width:700px) {
+      .canon-block {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    .canon-block .kv span.k {
+      display: block;
+      font-size: 10.5px;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      color: var(--text-faint);
+      margin-bottom: 3px;
+    }
+
+    .canon-block .kv span.v {
+      font-family: var(--font-mono);
+      font-size: 14px;
+    }
+
+    .failure-banner {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      background: var(--bad-dim);
+      border: 1px solid var(--bad);
+      border-radius: var(--radius);
+      padding: 11px 14px;
+      margin-bottom: 14px;
+      font-size: 13px;
+      color: var(--text);
+    }
+
+    .failure-banner b {
+      color: var(--bad);
+    }
+
+    .target-card {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--panel-2);
+      padding: 13px 14px;
+      margin-bottom: 10px;
+    }
+
+    .target-card .th {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .target-card .th .proto {
+      font-weight: 600;
+      font-family: var(--font-mono);
+    }
+
+    .target-card .addr {
+      font-size: 12px;
+      color: var(--text-dim);
+      font-family: var(--font-mono);
+      margin-bottom: 8px;
+    }
+
+    .target-card .written {
+      font-size: 15px;
+      font-family: var(--font-mono);
+      margin-bottom: 8px;
+    }
+
+    .target-card.errored {
+      border-color: var(--bad);
+      background: var(--bad-dim);
+    }
+
+    .loss-row {
+      display: flex;
+      gap: 9px;
+      align-items: flex-start;
+      padding: 8px 10px;
+      border-radius: var(--radius);
+      font-size: 12.5px;
+      margin-top: 6px;
+      border: 1px solid transparent;
+    }
+
+    .loss-row.info {
+      background: var(--info-dim);
+      border-color: rgba(91, 158, 242, .35);
+      color: var(--text);
+    }
+
+    .loss-row.warning {
+      background: var(--warn-dim);
+      border-color: rgba(242, 184, 75, .35);
+      color: var(--text);
+    }
+
+    .loss-row.error {
+      background: var(--bad-dim);
+      border-color: rgba(242, 84, 91, .35);
+      color: var(--text);
+    }
+
+    .loss-row .code {
+      font-family: var(--font-mono);
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .no-loss {
+      font-size: 12.5px;
+      color: var(--good);
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      margin-top: 2px;
+    }
+
+    /* ---------- table (mapeamentos) ---------- */
+    table.data {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    table.data th {
+      text-align: left;
+      color: var(--text-faint);
+      font-weight: 600;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .4px;
+      padding: 0 10px 8px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    table.data th.sortable {
+      cursor: pointer;
+      user-select: none;
+      white-space: nowrap;
+    }
+
+    table.data th.sortable:hover {
+      color: var(--text);
+    }
+
+    table.data th.sortable .arrow {
+      opacity: .5;
+      margin-left: 3px;
+    }
+
+    table.data th.sortable.sorted .arrow {
+      opacity: 1;
+      color: var(--accent);
+    }
+
+    table.data td {
+      padding: 10px;
+      border-bottom: 1px solid var(--border-soft);
+      vertical-align: top;
+    }
+
+    table.data tr.clickable {
+      cursor: pointer;
+    }
+
+    table.data tr.clickable:hover td {
+      background: var(--panel-2);
+    }
+
+    table.data td.pid {
+      font-family: var(--font-mono);
+    }
+
+    .binding-block {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px;
+      margin-bottom: 12px;
+      background: var(--panel-3);
+    }
+
+    .binding-block .bh {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text-faint);
+      border: 1px dashed var(--border);
+      border-radius: var(--radius);
+    }
+
+    /* ---------- stat cards (painel resumo) ---------- */
+    .stat-card {
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .stat-card .stat-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .4px;
+      color: var(--text-faint);
+    }
+
+    .stat-card .stat-value {
+      font-size: 22px;
+      font-weight: 700;
+      font-family: var(--font-mono);
+    }
+
+    .stat-card .stat-sub {
+      font-size: 11.5px;
+      color: var(--text-dim);
+    }
+
+    /* ---------- charts (svg bar/timeline) ---------- */
+    .chart-box {
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px;
+    }
+
+    .chart-box h3 {
+      margin: 0 0 12px;
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--text-dim);
+      text-transform: none;
+    }
+
+    .chart-legend {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+      font-size: 11.5px;
+      color: var(--text-dim);
+    }
+
+    .chart-legend .li {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .chart-legend .sw {
+      width: 9px;
+      height: 9px;
+      border-radius: 2px;
+      flex: none;
+    }
+
+    .bar-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+      font-size: 12px;
+    }
+
+    .bar-row .bl {
+      width: 96px;
+      flex: none;
+      color: var(--text-dim);
+      text-align: right;
+      font-family: var(--font-mono);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .bar-row .bt {
+      flex: 1;
+      background: var(--panel-3);
+      border-radius: 2px;
+      overflow: hidden;
+      height: 16px;
+      position: relative;
+    }
+
+    .bar-row .bf {
+      height: 100%;
+      border-radius: 2px;
+      transition: width .25s ease;
+    }
+
+    .bar-row .bv {
+      width: 34px;
+      flex: none;
+      font-family: var(--font-mono);
+      color: var(--text-dim);
+    }
+
+    .chart-empty {
+      color: var(--text-faint);
+      font-size: 12.5px;
+      padding: 8px 0;
+    }
+
+    /* ---------- toolbar (filter/sort/group) ---------- */
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 18px;
+      align-items: flex-end;
+      margin-bottom: 16px;
+    }
+
+    .toolbar .tb-group {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .toolbar .tb-label {
+      font-size: 10.5px;
+      text-transform: uppercase;
+      letter-spacing: .4px;
+      color: var(--text-faint);
+    }
+
+    .toolbar .tb-chips {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .toolbar select,
+    .toolbar input[type=text],
+    .toolbar input[type=search] {
+      width: auto;
+      min-width: 150px;
+    }
+
+    .toolbar input[type=search] {
+      min-width: 190px;
+    }
+
+    .tb-search-wrap {
+      position: relative;
+    }
+
+    .subtabs {
+      display: flex;
+      gap: 4px;
+      margin-left: auto;
+    }
+
+    .subtabs .subtab {
+      appearance: none;
+      border: 1px solid var(--border);
+      background: var(--panel-2);
+      color: var(--text-dim);
+      padding: 7px 12px;
+      border-radius: var(--radius);
+      cursor: pointer;
+      font-size: 12.5px;
+      font-weight: 600;
+    }
+
+    .subtabs .subtab:hover {
+      color: var(--text);
+      border-color: var(--accent);
+    }
+
+    .subtabs .subtab.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #08211E;
+    }
+
+    .filter-count {
+      font-size: 11.5px;
+      color: var(--text-faint);
+      font-weight: 400;
+    }
+
+    .group-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 2px;
+      margin: 16px 0 8px;
+      border-bottom: 1px solid var(--border-soft);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .4px;
+      color: var(--text-faint);
+      font-weight: 600;
+    }
+
+    .group-header:first-child {
+      margin-top: 0;
+    }
+
+    .group-header .gcount {
+      font-family: var(--font-mono);
+      color: var(--text-dim);
+      text-transform: none;
+      letter-spacing: 0;
+    }
+
+    /* ---------- history ---------- */
+    .log-item {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-bottom: 9px;
+      overflow: hidden;
+      background: var(--panel-2);
+    }
+
+    .log-head {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 11px 14px;
+      cursor: pointer;
+    }
+
+    .log-head:hover {
+      background: var(--panel-3);
+    }
+
+    .log-head .pid {
+      font-family: var(--font-mono);
+      font-weight: 600;
+      flex: 1;
+    }
+
+    .log-head .ts {
+      font-size: 11.5px;
+      color: var(--text-faint);
+      font-family: var(--font-mono);
+      white-space: nowrap;
+    }
+
+    .log-body {
+      padding: 0 14px 14px;
+      border-top: 1px solid var(--border-soft);
+      display: none;
+    }
+
+    .log-body.open {
+      display: block;
+      padding-top: 12px;
+    }
+
+    .log-item.kind-info .log-head,
+    .log-item.kind-error .log-head {
+      cursor: default;
+    }
+
+    .log-item.kind-error {
+      border-color: var(--bad);
+    }
+
+    /* ---------- toast ---------- */
+    #toast-region {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-width: 360px;
+    }
+
+    .toast {
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--accent);
+      color: var(--text);
+      padding: 11px 14px;
+      border-radius: var(--radius);
+      font-size: 13px;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, .35);
+    }
+
+    .toast.error {
+      border-left-color: var(--bad);
+    }
+
+    .toast.success {
+      border-left-color: var(--good);
+    }
+
+    /* ---------- modal ---------- */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(5, 9, 13, .7);
+      z-index: 50;
+      display: none;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 8vh 16px;
+    }
+
+    .modal-backdrop.open {
+      display: flex;
+    }
+
+    .modal {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      max-width: 560px;
+      width: 100%;
+      padding: 22px 24px;
+      max-height: 78vh;
+      overflow: auto;
+    }
+
+    .modal h3 {
+      margin: 0 0 12px;
+      font-size: 16px;
+    }
+
+    .modal p {
+      color: var(--text-dim);
+      font-size: 13.5px;
+      margin: 0 0 10px;
+    }
+
+    .modal .close-row {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 16px;
+    }
+
+    .field-error {
+      color: var(--bad);
+      font-size: 12.5px;
+      margin-top: 8px;
+      padding: 9px 11px;
+      background: var(--bad-dim);
+      border-radius: var(--radius);
+      border: 1px solid var(--bad);
+    }
+
+    .hint-line {
+      font-size: 12px;
+      color: var(--text-faint);
+      margin-top: 4px;
+    }
+  </style>
 </head>
+
 <body>
 
-<div class="topbar">
-  <div class="brand">
-    <span class="brand-mark">
-      <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M2 8h3l1.5-4 3 8L11 8h3" stroke="#4FD1C5" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-    </span>
-    <span class="brand-text">
-      <b>Gateway Semântico</b>
-      <span>MMS · DNP3 · MODBUS · OPCUA</span>
-    </span>
+  <div class="topbar">
+    <div class="brand">
+      <span class="brand-mark">
+        <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M2 8h3l1.5-4 3 8L11 8h3" stroke="#4FD1C5" stroke-width="1.4" stroke-linecap="round"
+            stroke-linejoin="round" />
+        </svg>
+      </span>
+      <span class="brand-text">
+        <b>Gateway Semântico</b>
+        <span>MMS · DNP3 · MODBUS · OPCUA</span>
+      </span>
+    </div>
+    <nav class="tabs" role="tablist" aria-label="Seções">
+      <button class="tab" data-view="painel" role="tab">Painel</button>
+      <button class="tab" data-view="conversor" role="tab">Conversor</button>
+      <button class="tab" data-view="mapeamentos" role="tab">Mapeamentos</button>
+      <button class="tab" data-view="historico" role="tab">Histórico</button>
+    </nav>
+    <button class="btn-help" id="btn-help" type="button">Como funciona?</button>
   </div>
-  <nav class="tabs" role="tablist" aria-label="Seções">
-    <button class="tab" data-view="painel" role="tab">Painel</button>
-    <button class="tab" data-view="conversor" role="tab">Conversor</button>
-    <button class="tab" data-view="mapeamentos" role="tab">Mapeamentos</button>
-    <button class="tab" data-view="historico" role="tab">Histórico</button>
-  </nav>
-  <button class="btn-help" id="btn-help" type="button">Como funciona?</button>
-</div>
 
-<main>
+  <main>
 
-  <!-- ================= PAINEL ================= -->
-  <section class="view" id="view-painel">
-    <h1 class="page-title">Painel</h1>
-    <p class="page-sub">Estado dos quatro protocolos e atalho para os pontos cadastrados. Desligue um adaptador para simular perda de comunicação em campo.</p>
+    <!-- ================= PAINEL ================= -->
+    <section class="view" id="view-painel">
+      <h1 class="page-title">Painel</h1>
+      <p class="page-sub">Estado dos quatro protocolos e atalho para os pontos cadastrados. Desligue um adaptador para
+        simular perda de comunicação em campo.</p>
 
-    <div class="panel">
-      <h2>Adaptadores <small id="adapters-updated"></small></h2>
-      <div class="grid cols-4" id="adapters-grid"></div>
-    </div>
-
-    <div class="panel">
-      <h2>Demonstração guiada
-        <small>roda os 2 exemplos do desafio + 1 falha + 1 config inválida</small>
-      </h2>
-      <button class="btn btn-primary" id="btn-run-demo" type="button">▶ Rodar demonstração</button>
-      <span class="hint-line" id="demo-feedback"></span>
-    </div>
-
-    <div class="panel">
-      <h2>Pontos cadastrados <small id="points-count"></small></h2>
-      <div class="grid cols-3" id="points-quick-grid"></div>
-    </div>
-  </section>
-
-  <!-- ================= CONVERSOR ================= -->
-  <section class="view" id="view-conversor">
-    <h1 class="page-title">Conversor de pontos</h1>
-    <p class="page-sub">Escolha um ponto, de onde o dado está vindo agora e para onde ele deve ser publicado. O gateway normaliza para o modelo canônico e reporta qualquer metadado perdido na tradução.</p>
-
-    <div class="panel">
-      <h2>1 · Ponto</h2>
-      <select id="conv-point-select">
-        <option value="">Selecione um ponto…</option>
-      </select>
-    </div>
-
-    <div class="panel" id="conv-source-panel" style="display:none;">
-      <h2>2 · Origem <small>protocolo de onde o dado está sendo lido agora</small></h2>
-      <div id="conv-source-chips" style="display:flex; gap:8px; flex-wrap:wrap;"></div>
-    </div>
-
-    <div class="panel" id="conv-target-panel" style="display:none;">
-      <h2>3 · Destino(s) <small>um ou mais protocolos para publicar</small></h2>
-      <div id="conv-target-chips" style="display:flex; gap:8px; flex-wrap:wrap;"></div>
-      <div style="margin-top:16px; display:flex; align-items:center; gap:12px;">
-        <button class="btn btn-primary" id="btn-convert" type="button" disabled>Converter agora</button>
-        <span class="hint-line" id="conv-hint"></span>
+      <div class="panel">
+        <h2>Adaptadores <small id="adapters-updated"></small></h2>
+        <div class="grid cols-4" id="adapters-grid"></div>
       </div>
+
+      <div class="panel">
+        <h2>Demonstração guiada
+          <small>roda os 2 exemplos do desafio + 1 falha + 1 config inválida</small>
+        </h2>
+        <button class="btn btn-primary" id="btn-run-demo" type="button">▶ Rodar demonstração</button>
+        <span class="hint-line" id="demo-feedback"></span>
+      </div>
+
+      <div class="panel">
+        <h2>Resumo &amp; indicadores <small>visão consolidada do que está cadastrado e acontecendo agora</small></h2>
+        <div class="grid cols-4" id="dash-stats-grid" style="margin-bottom:14px;"></div>
+        <div class="grid cols-2">
+          <div class="chart-box">
+            <h3>Protocolos em uso nos pontos cadastrados</h3>
+            <div id="dash-chart-protocols"></div>
+          </div>
+          <div class="chart-box">
+            <h3>Eventos por tipo (sessão atual)</h3>
+            <div id="dash-chart-eventkinds"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Pontos cadastrados <small id="points-count"></small></h2>
+        <div class="grid cols-3" id="points-quick-grid"></div>
+      </div>
+    </section>
+
+    <!-- ================= CONVERSOR ================= -->
+    <section class="view" id="view-conversor">
+      <h1 class="page-title">Conversor de pontos</h1>
+      <p class="page-sub">Escolha um ponto, de onde o dado está vindo agora e para onde ele deve ser publicado. O
+        gateway normaliza para o modelo canônico e reporta qualquer metadado perdido na tradução.</p>
+
+      <div class="panel">
+        <h2>1 · Ponto</h2>
+        <select id="conv-point-select">
+          <option value="">Selecione um ponto…</option>
+        </select>
+      </div>
+
+      <div class="panel" id="conv-source-panel" style="display:none;">
+        <h2>2 · Origem <small>protocolo de onde o dado está sendo lido agora</small></h2>
+        <div id="conv-source-chips" style="display:flex; gap:8px; flex-wrap:wrap;"></div>
+      </div>
+
+      <div class="panel" id="conv-target-panel" style="display:none;">
+        <h2>3 · Destino(s) <small>um ou mais protocolos para publicar</small></h2>
+        <div id="conv-target-chips" style="display:flex; gap:8px; flex-wrap:wrap;"></div>
+        <div style="margin-top:16px; display:flex; align-items:center; gap:12px;">
+          <button class="btn btn-primary" id="btn-convert" type="button" disabled>Converter agora</button>
+          <span class="hint-line" id="conv-hint"></span>
+        </div>
+      </div>
+
+      <div id="conv-result"></div>
+    </section>
+
+    <!-- ================= MAPEAMENTOS ================= -->
+    <section class="view" id="view-mapeamentos">
+      <h1 class="page-title">Mapeamentos</h1>
+      <p class="page-sub">Pontos cadastrados e seus bindings por protocolo. Cadastre um ponto novo para testar as regras
+        de validação estática do gateway.</p>
+
+      <div class="panel">
+        <h2>Pontos
+          <span style="display:flex; gap:8px;">
+            <button class="btn btn-sm" id="btn-validate-all" type="button">Validar todos</button>
+            <button class="btn btn-sm btn-primary" id="btn-new-mapping" type="button">+ Novo ponto</button>
+          </span>
+        </h2>
+        <div id="mappings-table-wrap"></div>
+      </div>
+
+      <div class="panel" id="mapping-detail-panel" style="display:none;"></div>
+      <div class="panel" id="mapping-form-panel" style="display:none;"></div>
+    </section>
+
+    <!-- ================= HISTÓRICO ================= -->
+    <section class="view" id="view-historico">
+      <h1 class="page-title">Histórico</h1>
+      <p class="page-sub">Registro de conversões e eventos do gateway. Filtre, ordene, agrupe e alterne entre lista,
+        tabela e gráficos para lidar com o alto volume de informações sem perder o contexto.</p>
+
+      <div class="panel">
+        <h2>Eventos <span class="filter-count" id="hist-filter-count"></span>
+          <span style="display:flex; gap:8px;">
+            <button class="btn btn-sm" id="btn-refresh-logs" type="button">↻ Atualizar</button>
+            <button class="btn btn-sm btn-danger" id="btn-clear-logs" type="button">Limpar histórico</button>
+          </span>
+        </h2>
+
+        <div class="toolbar">
+          <div class="tb-group tb-search-wrap">
+            <span class="tb-label">Buscar</span>
+            <input type="search" id="hist-search" placeholder="ponto, protocolo, mensagem…">
+          </div>
+
+          <div class="tb-group">
+            <span class="tb-label">Protocolo</span>
+            <div class="tb-chips" id="hist-filter-protocol"></div>
+          </div>
+
+          <div class="tb-group">
+            <span class="tb-label">Status</span>
+            <div class="tb-chips" id="hist-filter-status"></div>
+          </div>
+
+          <div class="tb-group">
+            <span class="tb-label">Ordenar por</span>
+            <select id="hist-sort">
+              <option value="time_desc">Mais recente primeiro</option>
+              <option value="time_asc">Mais antigo primeiro</option>
+              <option value="point_asc">Ponto (A→Z)</option>
+              <option value="point_desc">Ponto (Z→A)</option>
+              <option value="protocol_asc">Protocolo de origem (A→Z)</option>
+              <option value="losses_desc">Nº de perdas (maior→menor)</option>
+            </select>
+          </div>
+
+          <div class="tb-group">
+            <span class="tb-label">Agrupar por</span>
+            <select id="hist-group">
+              <option value="none">Sem agrupamento</option>
+              <option value="point">Ponto</option>
+              <option value="protocol">Protocolo de origem</option>
+              <option value="status">Status</option>
+              <option value="kind">Tipo de evento</option>
+            </select>
+          </div>
+
+          <div class="subtabs" id="hist-view-switch">
+            <button class="subtab active" data-hview="lista" type="button">☰ Lista</button>
+            <button class="subtab" data-hview="tabela" type="button">▦ Tabela</button>
+            <button class="subtab" data-hview="graficos" type="button">📊 Gráficos</button>
+          </div>
+        </div>
+
+        <div id="hist-view-lista"></div>
+        <div id="hist-view-tabela" style="display:none;"></div>
+        <div id="hist-view-graficos" style="display:none;"></div>
+      </div>
+    </section>
+
+  </main>
+
+  <div id="toast-region" aria-live="polite"></div>
+
+  <div class="modal-backdrop" id="help-backdrop">
+    <div class="modal">
+      <h3>Como o gateway funciona</h3>
+      <p>Cada protocolo industrial (IEC 61850 MMS, DNP3, Modbus, OPC UA) representa um dado de um jeito diferente. O
+        gateway lê o valor bruto de um protocolo de origem e o normaliza para um <b style="color:var(--text)">modelo
+          canônico</b>: valor de engenharia, tipo, unidade, qualidade e estampa de tempo.</p>
+      <p>Ao publicar esse ponto canônico em outro protocolo, o gateway tenta representar tudo o que foi lido. Quando o
+        destino não tem um canal equivalente — por exemplo, <b style="color:var(--text)">Modbus não representa qualidade
+          nem timestamp nativamente</b> — a perda é registrada explicitamente como um evento (<i>loss</i>), em vez de
+        simplesmente descartada em silêncio.</p>
+      <p>Já o <b style="color:var(--text)">OPC UA</b> representa qualidade (StatusCode) e timestamp nativamente, então
+        uma conversão para OPC UA normalmente não perde nada.</p>
+      <p>Quando a comunicação com a origem cai, o gateway congela o último valor bom conhecido, marca a qualidade como
+        <code>invalid[comm_lost,stale]</code>, e cada destino reflete essa falha do seu próprio jeito — sem derrubar a
+        conversão para os outros destinos.</p>
+      <div class="close-row"><button class="btn btn-primary" id="btn-help-close" type="button">Entendi</button></div>
     </div>
-
-    <div id="conv-result"></div>
-  </section>
-
-  <!-- ================= MAPEAMENTOS ================= -->
-  <section class="view" id="view-mapeamentos">
-    <h1 class="page-title">Mapeamentos</h1>
-    <p class="page-sub">Pontos cadastrados e seus bindings por protocolo. Cadastre um ponto novo para testar as regras de validação estática do gateway.</p>
-
-    <div class="panel">
-      <h2>Pontos
-        <span style="display:flex; gap:8px;">
-          <button class="btn btn-sm" id="btn-validate-all" type="button">Validar todos</button>
-          <button class="btn btn-sm btn-primary" id="btn-new-mapping" type="button">+ Novo ponto</button>
-        </span>
-      </h2>
-      <div id="mappings-table-wrap"></div>
-    </div>
-
-    <div class="panel" id="mapping-detail-panel" style="display:none;"></div>
-    <div class="panel" id="mapping-form-panel" style="display:none;"></div>
-  </section>
-
-  <!-- ================= HISTÓRICO ================= -->
-  <section class="view" id="view-historico">
-    <h1 class="page-title">Histórico</h1>
-    <p class="page-sub">Registro de conversões e eventos do gateway, mais recente primeiro. Atualiza sozinho a cada poucos segundos.</p>
-
-    <div class="panel">
-      <h2>Eventos
-        <span style="display:flex; gap:8px;">
-          <button class="btn btn-sm" id="btn-refresh-logs" type="button">↻ Atualizar</button>
-          <button class="btn btn-sm btn-danger" id="btn-clear-logs" type="button">Limpar histórico</button>
-        </span>
-      </h2>
-      <div id="logs-list"></div>
-    </div>
-  </section>
-
-</main>
-
-<div id="toast-region" aria-live="polite"></div>
-
-<div class="modal-backdrop" id="help-backdrop">
-  <div class="modal">
-    <h3>Como o gateway funciona</h3>
-    <p>Cada protocolo industrial (IEC 61850 MMS, DNP3, Modbus, OPC UA) representa um dado de um jeito diferente. O gateway lê o valor bruto de um protocolo de origem e o normaliza para um <b style="color:var(--text)">modelo canônico</b>: valor de engenharia, tipo, unidade, qualidade e estampa de tempo.</p>
-    <p>Ao publicar esse ponto canônico em outro protocolo, o gateway tenta representar tudo o que foi lido. Quando o destino não tem um canal equivalente — por exemplo, <b style="color:var(--text)">Modbus não representa qualidade nem timestamp nativamente</b> — a perda é registrada explicitamente como um evento (<i>loss</i>), em vez de simplesmente descartada em silêncio.</p>
-    <p>Já o <b style="color:var(--text)">OPC UA</b> representa qualidade (StatusCode) e timestamp nativamente, então uma conversão para OPC UA normalmente não perde nada.</p>
-    <p>Quando a comunicação com a origem cai, o gateway congela o último valor bom conhecido, marca a qualidade como <code>invalid[comm_lost,stale]</code>, e cada destino reflete essa falha do seu próprio jeito — sem derrubar a conversão para os outros destinos.</p>
-    <div class="close-row"><button class="btn btn-primary" id="btn-help-close" type="button">Entendi</button></div>
   </div>
-</div>
 
-<script>
-(function(){
-  "use strict";
-
-  /* ============ constants ============ */
-  var PROTOCOLS = [
-    { id:"mms",    label:"MMS",    full:"IEC 61850 MMS" },
-    { id:"dnp3",   label:"DNP3",   full:"DNP3" },
-    { id:"modbus", label:"Modbus", full:"Modbus" },
-    { id:"opcua",  label:"OPC UA", full:"OPC UA" }
-  ];
-  var PROTO_FULL = {}; PROTOCOLS.forEach(function(p){ PROTO_FULL[p.id] = p.full; });
-  var PROTO_LABEL = {}; PROTOCOLS.forEach(function(p){ PROTO_LABEL[p.id] = p.label; });
-
-  var DATA_TYPES = ["float", "int", "bool", "string"];
-  var KNOWN_UNITS = [
-    { v:"", label:"(adimensional)" },
-    { v:"V", label:"V — tensão" },
-    { v:"kV", label:"kV — tensão" },
-    { v:"A", label:"A — corrente" },
-    { v:"kA", label:"kA — corrente" },
-    { v:"W", label:"W — potência" },
-    { v:"kW", label:"kW — potência" },
-    { v:"Hz", label:"Hz — frequência" }
-  ];
-  var VALIDITY_OPTIONS = [
-    { v:"", label:"(não informar)" },
-    { v:"good", label:"good" },
-    { v:"invalid", label:"invalid" },
-    { v:"questionable", label:"questionable" }
-  ];
-  var QUALITY_FLAGS = ["overflow","out_of_range","forced","substituted","test","comm_lost","stale","config_error"];
-
-  /* ============ tiny helpers ============ */
-  function el(tag, attrs, children){
-    var node = document.createElement(tag);
-    attrs = attrs || {};
-    Object.keys(attrs).forEach(function(k){
-      if (k === "class") node.className = attrs[k];
-      else if (k === "html") node.innerHTML = attrs[k];
-      else if (k === "text") node.textContent = attrs[k];
-      else if (k.indexOf("on") === 0 && typeof attrs[k] === "function") node.addEventListener(k.slice(2), attrs[k]);
-      else node.setAttribute(k, attrs[k]);
-    });
-    (children || []).forEach(function(c){ if (c) node.appendChild(c); });
-    return node;
-  }
-  function fmtTime(tsSeconds){
-    try {
-      var d = new Date(tsSeconds * 1000);
-      return d.toLocaleString("pt-BR", { hour12:false });
-    } catch(e){ return ""; }
-  }
-  function fmtIso(iso){
-    try {
-      var d = new Date(iso);
-      return d.toLocaleString("pt-BR", { hour12:false });
-    } catch(e){ return iso; }
-  }
-  function escapeHtml(s){
-    return String(s).replace(/[&<>"']/g, function(c){
-      return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c];
-    });
-  }
-
-  /* ============ toast ============ */
-  function toast(message, kind){
-    var region = document.getElementById("toast-region");
-    var node = el("div", { class:"toast" + (kind ? " " + kind : ""), text:message });
-    region.appendChild(node);
-    setTimeout(function(){ node.remove(); }, 4200);
-  }
-
-  /* ============ api layer ============ */
-  function ApiError(message, status){
-    this.message = message; this.status = status; this.name = "ApiError";
-  }
-  ApiError.prototype = Object.create(Error.prototype);
-
-  function api(method, path, body){
-    var opts = { method: method, headers:{} };
-    if (body !== undefined){
-      opts.headers["Content-Type"] = "application/json";
-      opts.body = JSON.stringify(body);
-    }
-    return fetch(path, opts).catch(function(){
-      throw new ApiError("Não foi possível falar com o servidor (" + path + "). O backend está rodando?", 0);
-    }).then(function(res){
-      return res.text().then(function(text){
-        var data = null;
-        if (text){
-          try { data = JSON.parse(text); } catch(e){ data = text; }
-        }
-        if (!res.ok){
-          var msg = (data && typeof data === "object" && "detail" in data) ? data.detail
-                   : (typeof data === "string" && data) ? data
-                   : ("Erro " + res.status);
-          throw new ApiError(msg, res.status);
-        }
-        return data;
-      });
-    });
-  }
-  function apiGet(path){ return api("GET", path); }
-  function apiPost(path, body){ return api("POST", path, body === undefined ? {} : body); }
-  function apiDelete(path){ return api("DELETE", path); }
-
-  function reportApiError(err, fallback){
-    var msg = (err && err.message) ? err.message : (fallback || "Ocorreu um erro inesperado.");
-    toast(msg, "error");
-  }
-
-  /* ============ view switching ============ */
-  var activePolls = {};
-  function clearPoll(name){ if (activePolls[name]){ clearInterval(activePolls[name]); delete activePolls[name]; } }
-
-  var VIEW_INIT = {
-    painel: initPainel,
-    conversor: initConversor,
-    mapeamentos: initMapeamentos,
-    historico: initHistorico
-  };
-
-  function showView(name){
-    document.querySelectorAll(".tab").forEach(function(t){
-      t.classList.toggle("active", t.dataset.view === name);
-      t.setAttribute("aria-selected", t.dataset.view === name ? "true" : "false");
-    });
-    document.querySelectorAll(".view").forEach(function(v){
-      v.classList.toggle("active", v.id === "view-" + name);
-    });
-    clearPoll("adapters");
-    clearPoll("logs");
-    if (VIEW_INIT[name]) VIEW_INIT[name]();
-    location.hash = name;
-  }
-
-  document.querySelectorAll(".tab").forEach(function(t){
-    t.addEventListener("click", function(){ showView(t.dataset.view); });
-  });
-
-  /* ============ shared renderers ============ */
-  function circuitPill(state){
-    var map = {
-      closed:    { cls:"good", label:"operando" },
-      open:      { cls:"bad",  label:"circuito aberto" },
-      half_open: { cls:"warn", label:"testando reconexão" }
-    };
-    var m = map[state] || { cls:"off", label: state || "desconhecido" };
-    return el("span", { class:"pill " + m.cls, text: m.label });
-  }
-
-  function protocolBadge(id){
-    return el("span", { class:"badge-proto", text: PROTO_LABEL[id] || id });
-  }
-
-  function qualityInline(q){
-    var flags = (q.flags && q.flags.length) ? q.flags.join(",") : "-";
-    var cls = q.validity === "good" ? "good" : (q.validity === "questionable" ? "warn" : "bad");
-    return el("span", { class:"pill " + cls, text: q.validity + "[" + flags + "]" });
-  }
-
-  function renderLoss(loss){
-    return el("div", { class:"loss-row " + loss.severity }, [
-      el("span", { class:"code", text:"[" + loss.severity.toUpperCase() + "] " + loss.code }),
-      el("span", { text: loss.message + (loss.affected_value !== null && loss.affected_value !== undefined ? " (valor: " + loss.affected_value + ")" : "") })
-    ]);
-  }
-
-  function renderCanonicalBlock(c){
-    if (!c) return el("div", { class:"empty-state", text:"Sem leitura da origem." });
-    var wrap = el("div", { class:"canon-block" });
-    function kv(label, valueNode){
-      var box = el("div", { class:"kv" });
-      box.appendChild(el("span", { class:"k", text:label }));
-      var v = el("span", { class:"v" });
-      if (typeof valueNode === "string") v.textContent = valueNode; else v.appendChild(valueNode);
-      box.appendChild(v);
-      wrap.appendChild(box);
-    }
-    kv("Valor", (c.value === null ? "—" : String(c.value)) + (c.unit ? " " + c.unit : ""));
-    kv("Tipo", c.data_type);
-    kv("Qualidade", qualityInline(c.quality));
-    kv("Timestamp", fmtIso(c.timestamp.value_utc) + " · " + c.timestamp.sync_source);
-    return wrap;
-  }
-
-  function renderTargetCard(protocol, data){
-    if (data && data.error){
-      return el("div", { class:"target-card errored" }, [
-        el("div", { class:"th" }, [ el("span", { class:"proto", text: PROTO_LABEL[protocol] || protocol }), el("span", { class:"pill bad", text:"sem binding" }) ]),
-        el("div", { text: data.error, style:"color:var(--bad); font-size:12.5px;" })
-      ]);
-    }
-    var card = el("div", { class:"target-card" });
-    var head = el("div", { class:"th" }, [ el("span", { class:"proto", text: PROTO_LABEL[protocol] || protocol }) ]);
-    if (data.status_code_severity){
-      var sevCls = data.status_code_severity === "Good" ? "good" : (data.status_code_severity === "Uncertain" ? "warn" : "bad");
-      head.appendChild(el("span", { class:"pill " + sevCls, text:"StatusCode " + data.status_code_severity }));
-    }
-    card.appendChild(head);
-    card.appendChild(el("div", { class:"addr", text:"endereço " + data.address }));
-    card.appendChild(el("div", { class:"written", text: String(data.written_value) }));
-    if (data.quality) card.appendChild(el("div", { style:"margin-bottom:6px;" }, [ qualityInline(data.quality) ]));
-    if (data.timestamp) card.appendChild(el("div", { class:"hint-line", text: fmtIso(data.timestamp.value_utc) }));
-    if (data.losses && data.losses.length){
-      data.losses.forEach(function(loss){ card.appendChild(renderLoss(loss)); });
-    } else {
-      card.appendChild(el("div", { class:"no-loss", text:"✓ nenhuma perda de metadados" }));
-    }
-    return card;
-  }
-
-  function renderReport(report){
-    var wrap = el("div");
-    if (report.failure){
-      wrap.appendChild(el("div", { class:"failure-banner" }, [
-        el("span", { html:"⚠" }),
-        el("span", {}, [ el("b", { text:"Falha na leitura da origem: " }), document.createTextNode(report.failure + ". O valor foi congelado no último bom conhecido.") ])
-      ]));
-    }
-    wrap.appendChild(renderCanonicalBlock(report.canonical));
-    Object.keys(report.targets || {}).forEach(function(proto){
-      wrap.appendChild(renderTargetCard(proto, report.targets[proto]));
-    });
-    return wrap;
-  }
-
-  /* ============ PAINEL ============ */
-  function initPainel(){
-    loadAdapters();
-    loadPointsQuick();
-    activePolls.adapters = setInterval(loadAdapters, 5000);
-  }
-
-  function loadAdapters(){
-    apiGet("/api/adapters").then(function(data){
-      var grid = document.getElementById("adapters-grid");
-      grid.innerHTML = "";
-      PROTOCOLS.forEach(function(p){
-        var info = data[p.id] || { connected:false, circuit_state:"closed" };
-        var card = el("div", { class:"adapter-card" });
-        var top = el("div", { class:"row-top" }, [
-          el("div", {}, [
-            el("div", { class:"proto-name", text:p.label }),
-            el("div", { class:"proto-full", text:p.full })
-          ])
-        ]);
-        var sw = el("label", { class:"switch", title: info.connected ? "Desligar comunicação" : "Ligar comunicação" });
-        var input = el("input", { type:"checkbox" });
-        input.checked = !!info.connected;
-        input.addEventListener("change", function(){
-          setAdapterConnection(p.id, input.checked);
-        });
-        sw.appendChild(input);
-        sw.appendChild(el("span", { class:"track" }, [ el("span", { class:"thumb" }) ]));
-        top.appendChild(sw);
-        card.appendChild(top);
-        card.appendChild(el("div", { style:"display:flex; align-items:center; gap:8px;" }, [
-          el("span", { class:"dot " + (info.connected ? "good" : "off") }),
-          el("span", { style:"font-size:12px; color:var(--text-dim);", text: info.connected ? "conectado" : "desconectado" })
-        ]));
-        card.appendChild(circuitPill(info.circuit_state));
-        grid.appendChild(card);
-      });
-      document.getElementById("adapters-updated").textContent = "atualizado às " + new Date().toLocaleTimeString("pt-BR", { hour12:false });
-    }).catch(function(err){ reportApiError(err, "Não foi possível carregar os adaptadores."); });
-  }
-
-  function setAdapterConnection(protocol, connected){
-    apiPost("/api/adapters/" + protocol + "/connection", { connected: connected }).then(function(){
-      toast((connected ? "Adaptador '" + protocol + "' religado." : "Adaptador '" + protocol + "' desligado — comunicação indisponível."), connected ? "success" : "");
-      loadAdapters();
-    }).catch(function(err){ reportApiError(err, "Não foi possível alterar a conexão."); loadAdapters(); });
-  }
-
-  document.getElementById("btn-run-demo").addEventListener("click", function(){
-    var btn = document.getElementById("btn-run-demo");
-    btn.disabled = true;
-    document.getElementById("demo-feedback").textContent = "rodando…";
-    apiPost("/api/demo").then(function(entries){
-      document.getElementById("demo-feedback").textContent = entries.length + " evento(s) gerado(s) — veja em Histórico.";
-      toast("Demonstração concluída: " + entries.length + " evento(s) registrado(s).", "success");
-      loadAdapters();
-    }).catch(function(err){
-      reportApiError(err, "Falha ao rodar a demonstração.");
-      document.getElementById("demo-feedback").textContent = "";
-    }).then(function(){ btn.disabled = false; });
-  });
-
-  function loadPointsQuick(){
-    apiGet("/api/mappings").then(function(list){
-      var grid = document.getElementById("points-quick-grid");
-      grid.innerHTML = "";
-      document.getElementById("points-count").textContent = "(" + list.length + ")";
-      if (!list.length){
-        grid.appendChild(el("div", { class:"empty-state", text:"Nenhum ponto cadastrado ainda. Vá em Mapeamentos → Novo ponto." }));
-        return;
-      }
-      list.forEach(function(m){
-        var card = el("button", { type:"button", class:"point-card", onclick:function(){
-          conversorState.presetPoint = m.point_id;
-          showView("conversor");
-        }});
-        card.appendChild(el("div", { class:"pid", text:m.point_id }));
-        var row = el("div", { class:"protos" });
-        m.protocols.forEach(function(p){ row.appendChild(protocolBadge(p)); });
-        card.appendChild(row);
-        grid.appendChild(card);
-      });
-    }).catch(function(err){ reportApiError(err, "Não foi possível carregar os pontos."); });
-  }
-
-  /* ============ CONVERSOR ============ */
-  var conversorState = { pointId:null, bindings:null, source:null, targets:{}, presetPoint:null };
-
-  function initConversor(){
-    var select = document.getElementById("conv-point-select");
-    apiGet("/api/mappings").then(function(list){
-      select.innerHTML = "<option value=''>Selecione um ponto…</option>";
-      list.forEach(function(m){
-        var opt = el("option", { value:m.point_id, text: m.point_id + "  (" + m.protocols.join(", ") + ")" });
-        select.appendChild(opt);
-      });
-      if (conversorState.presetPoint){
-        select.value = conversorState.presetPoint;
-        conversorState.presetPoint = null;
-        onConvPointChange();
-      }
-    }).catch(function(err){ reportApiError(err, "Não foi possível carregar os pontos."); });
-  }
-
-  document.getElementById("conv-point-select").addEventListener("change", onConvPointChange);
-
-  function onConvPointChange(){
-    var pointId = document.getElementById("conv-point-select").value;
-    conversorState.pointId = pointId || null;
-    conversorState.source = null;
-    conversorState.targets = {};
-    document.getElementById("conv-source-panel").style.display = "none";
-    document.getElementById("conv-target-panel").style.display = "none";
-    document.getElementById("conv-result").innerHTML = "";
-    if (!pointId) return;
-    apiGet("/api/mappings/" + encodeURIComponent(pointId)).then(function(detail){
-      conversorState.bindings = detail.bindings;
-      renderSourceChips();
-    }).catch(function(err){ reportApiError(err, "Não foi possível carregar o ponto."); });
-  }
-
-  function renderSourceChips(){
-    var wrap = document.getElementById("conv-source-chips");
-    wrap.innerHTML = "";
-    var available = Object.keys(conversorState.bindings);
-    PROTOCOLS.forEach(function(p){
-      if (available.indexOf(p.id) === -1) return;
-      var chip = el("button", { type:"button", class:"chip", text:p.label });
-      chip.addEventListener("click", function(){
-        conversorState.source = p.id;
-        conversorState.targets = {};
-        wrap.querySelectorAll(".chip").forEach(function(c){ c.classList.remove("selected"); });
-        chip.classList.add("selected");
-        renderTargetChips();
-      });
-      wrap.appendChild(chip);
-    });
-    document.getElementById("conv-source-panel").style.display = "block";
-    document.getElementById("conv-target-panel").style.display = "none";
-    document.getElementById("conv-result").innerHTML = "";
-  }
-
-  function renderTargetChips(){
-    var wrap = document.getElementById("conv-target-chips");
-    wrap.innerHTML = "";
-    PROTOCOLS.forEach(function(p){
-      if (p.id === conversorState.source) return;
-      var hasBinding = !!conversorState.bindings[p.id];
-      var chip = el("button", { type:"button", class:"chip" });
-      chip.appendChild(document.createTextNode(p.label));
-      if (!hasBinding) chip.appendChild(el("span", { class:"hint", text:"sem binding" }));
-      chip.addEventListener("click", function(){
-        conversorState.targets[p.id] = !conversorState.targets[p.id];
-        chip.classList.toggle("selected", !!conversorState.targets[p.id]);
-        updateConvertButton();
-      });
-      wrap.appendChild(chip);
-    });
-    document.getElementById("conv-target-panel").style.display = "block";
-    document.getElementById("conv-result").innerHTML = "";
-    updateConvertButton();
-  }
-
-  function updateConvertButton(){
-    var anyTarget = Object.keys(conversorState.targets).some(function(k){ return conversorState.targets[k]; });
-    document.getElementById("btn-convert").disabled = !anyTarget;
-    document.getElementById("conv-hint").textContent = anyTarget ? "" : "escolha ao menos um destino";
-  }
-
-  document.getElementById("btn-convert").addEventListener("click", function(){
-    var targets = Object.keys(conversorState.targets).filter(function(k){ return conversorState.targets[k]; });
-    var btn = document.getElementById("btn-convert");
-    btn.disabled = true;
-    apiPost("/api/convert", { point_id: conversorState.pointId, source: conversorState.source, targets: targets })
-      .then(function(report){
-        document.getElementById("conv-result").innerHTML = "";
-        document.getElementById("conv-result").appendChild(renderReport(report));
-      })
-      .catch(function(err){ reportApiError(err, "Falha ao converter."); })
-      .then(function(){ btn.disabled = false; updateConvertButton(); });
-  });
-
-  /* ============ MAPEAMENTOS ============ */
-  function initMapeamentos(){
-    document.getElementById("mapping-detail-panel").style.display = "none";
-    document.getElementById("mapping-form-panel").style.display = "none";
-    loadMappingsTable();
-  }
-
-  function loadMappingsTable(){
-    apiGet("/api/mappings").then(function(list){
-      var wrap = document.getElementById("mappings-table-wrap");
-      wrap.innerHTML = "";
-      if (!list.length){
-        wrap.appendChild(el("div", { class:"empty-state", text:"Nenhum ponto cadastrado. Use “Novo ponto” para começar." }));
-        return;
-      }
-      var table = el("table", { class:"data" });
-      table.appendChild(el("thead", {}, [ el("tr", {}, [
-        el("th", { text:"Ponto" }), el("th", { text:"Protocolos" }), el("th", { text:"" })
-      ])]));
-      var tbody = el("tbody");
-      list.forEach(function(m){
-        var tr = el("tr", { class:"clickable" });
-        tr.appendChild(el("td", { class:"pid", text:m.point_id }));
-        var protoCell = el("td");
-        m.protocols.forEach(function(p){ protoCell.appendChild(protocolBadge(p)); protoCell.appendChild(document.createTextNode(" ")); });
-        tr.appendChild(protoCell);
-        tr.appendChild(el("td", {}, [ el("button", { class:"btn btn-sm", text:"ver", onclick:function(ev){ ev.stopPropagation(); showMappingDetail(m.point_id); } }) ]));
-        tr.addEventListener("click", function(){ showMappingDetail(m.point_id); });
-        tbody.appendChild(tr);
-      });
-      table.appendChild(tbody);
-      wrap.appendChild(table);
-    }).catch(function(err){ reportApiError(err, "Não foi possível carregar os mapeamentos."); });
-  }
-
-  document.getElementById("btn-validate-all").addEventListener("click", function(){
-    apiPost("/api/mappings/validate").then(function(results){
-      var ok = Object.keys(results).filter(function(k){ return results[k] === null; }).length;
-      var total = Object.keys(results).length;
-      var failed = Object.keys(results).filter(function(k){ return results[k] !== null; });
-      if (failed.length){
-        toast(ok + "/" + total + " válidos. Falhas: " + failed.map(function(k){ return k + " — " + results[k]; }).join(" | "), "error");
-      } else {
-        toast("Todos os " + total + " ponto(s) são válidos.", "success");
-      }
-    }).catch(function(err){ reportApiError(err, "Falha ao validar."); });
-  });
-
-  function showMappingDetail(pointId){
-    document.getElementById("mapping-form-panel").style.display = "none";
-    var panel = document.getElementById("mapping-detail-panel");
-    panel.style.display = "block";
-    panel.innerHTML = "<h2>Carregando…</h2>";
-    apiGet("/api/mappings/" + encodeURIComponent(pointId)).then(function(detail){
-      panel.innerHTML = "";
-      var head = el("h2", {}, [
-        el("span", { class:"mono", text:detail.point_id }),
-        el("span", { style:"display:flex; gap:8px;" }, [
-          el("button", { class:"btn btn-sm", text:"Validar", onclick:function(){ validateOne(pointId); } }),
-          el("button", { class:"btn btn-sm btn-danger", text:"Excluir", onclick:function(){ deleteMapping(pointId); } }),
-          el("button", { class:"btn btn-sm btn-ghost", text:"Fechar", onclick:function(){ panel.style.display = "none"; } })
-        ])
-      ]);
-      panel.appendChild(head);
-      panel.appendChild(el("div", { id:"mapping-validate-result" }));
-
-      var table = el("table", { class:"data" });
-      table.appendChild(el("thead", {}, [ el("tr", {}, [
-        "Protocolo","Endereço","Tipo","Unidade","Escala","Offset","Validade nativa","Flags nativas","Faixa"
-      ].map(function(t){ return el("th", { text:t }); })) ]));
-      var tbody = el("tbody");
-      Object.keys(detail.bindings).forEach(function(proto){
-        var b = detail.bindings[proto];
-        tbody.appendChild(el("tr", {}, [
-          el("td", {}, [ protocolBadge(proto) ]),
-          el("td", { class:"mono", text:b.address }),
-          el("td", { text:b.data_type }),
-          el("td", { text:b.unit || "—" }),
-          el("td", { text:String(b.scale) }),
-          el("td", { text:String(b.offset) }),
-          el("td", { text:b.native_validity || "—" }),
-          el("td", { text:(b.native_quality_flags && b.native_quality_flags.length) ? b.native_quality_flags.join(", ") : "—" }),
-          el("td", { text:(b.min_engineering === null && b.max_engineering === null) ? "—" : ((b.min_engineering !== null ? b.min_engineering : "−∞") + " … " + (b.max_engineering !== null ? b.max_engineering : "+∞")) })
-        ]));
-      });
-      table.appendChild(tbody);
-      panel.appendChild(table);
-      panel.scrollIntoView({ behavior:"smooth", block:"nearest" });
-    }).catch(function(err){ reportApiError(err, "Não foi possível carregar o ponto."); panel.style.display = "none"; });
-  }
-
-  function validateOne(pointId){
-    apiPost("/api/mappings/validate?point_id=" + encodeURIComponent(pointId)).then(function(res){
-      var msg = res[pointId];
-      var box = document.getElementById("mapping-validate-result");
-      if (box) box.innerHTML = "";
-      if (msg){
-        toast(pointId + ": " + msg, "error");
-        if (box) box.appendChild(el("div", { class:"field-error", text:msg }));
-      } else {
-        toast(pointId + ": mapeamento válido.", "success");
-      }
-    }).catch(function(err){ reportApiError(err, "Falha ao validar."); });
-  }
-
-  function deleteMapping(pointId){
-    if (!confirm("Excluir o ponto '" + pointId + "'? Essa ação não pode ser desfeita.")) return;
-    apiDelete("/api/mappings/" + encodeURIComponent(pointId)).then(function(){
-      toast("Ponto '" + pointId + "' removido.", "success");
-      document.getElementById("mapping-detail-panel").style.display = "none";
-      loadMappingsTable();
-    }).catch(function(err){ reportApiError(err, "Falha ao excluir."); });
-  }
-
-  /* ---- new mapping form ---- */
-  var formBindingCount = 0;
-
-  document.getElementById("btn-new-mapping").addEventListener("click", function(){
-    document.getElementById("mapping-detail-panel").style.display = "none";
-    openMappingForm();
-  });
-
-  function openMappingForm(){
-    var panel = document.getElementById("mapping-form-panel");
-    panel.style.display = "block";
-    panel.innerHTML = "";
-    panel.appendChild(el("h2", {}, [
-      el("span", { text:"Novo ponto" }),
-      el("button", { class:"btn btn-sm btn-ghost", text:"Fechar", onclick:function(){ panel.style.display = "none"; } })
-    ]));
-
-    var form = el("form");
-    var pointIdField = el("label", { class:"field", style:"max-width:340px; margin-bottom:14px;" }, [
-      el("span", { class:"lbl", text:"Identificador do ponto (point_id)" }),
-      el("input", { type:"text", id:"f-point-id", placeholder:"ex: SE02.MMXU2.PhV.phsB", required:"required" })
-    ]);
-    form.appendChild(pointIdField);
-
-    var bindingsWrap = el("div", { id:"f-bindings-wrap" });
-    form.appendChild(bindingsWrap);
-
-    formBindingCount = 0;
-    addBindingBlock(bindingsWrap);
-    addBindingBlock(bindingsWrap);
-
-    var addBtn = el("button", { type:"button", class:"btn btn-sm", text:"+ adicionar protocolo" });
-    addBtn.addEventListener("click", function(){ addBindingBlock(bindingsWrap); });
-    form.appendChild(addBtn);
-
-    form.appendChild(el("div", { id:"f-error" }));
-
-    var actions = el("div", { style:"margin-top:16px; display:flex; gap:10px;" }, [
-      el("button", { type:"submit", class:"btn btn-primary", text:"Cadastrar ponto" })
-    ]);
-    form.appendChild(actions);
-
-    form.addEventListener("submit", function(ev){
-      ev.preventDefault();
-      submitMappingForm(bindingsWrap);
-    });
-
-    panel.appendChild(form);
-    panel.scrollIntoView({ behavior:"smooth", block:"nearest" });
-  }
-
-  function addBindingBlock(wrap){
-    formBindingCount += 1;
-    var idx = formBindingCount;
-    var block = el("fieldset", { class:"binding-block", "data-idx":idx });
-    block.appendChild(el("legend", { text:"binding #" + idx }));
-
-    var grid = el("div", { class:"grid cols-3" });
-
-    var protoSelect = el("select", { class:"f-protocol" });
-    PROTOCOLS.forEach(function(p){ protoSelect.appendChild(el("option", { value:p.id, text:p.full })); });
-    protoSelect.selectedIndex = (idx - 1) % PROTOCOLS.length;
-    grid.appendChild(fieldWrap("Protocolo", protoSelect));
-
-    var addrInput = el("input", { type:"text", class:"f-address", placeholder:"ex: 40010 / ns=2;s=Point / BI12" });
-    grid.appendChild(fieldWrap("Endereço", addrInput));
-
-    var typeSelect = el("select", { class:"f-datatype" });
-    DATA_TYPES.forEach(function(t){ typeSelect.appendChild(el("option", { value:t, text:t })); });
-    grid.appendChild(fieldWrap("Tipo de dado", typeSelect));
-
-    var unitSelect = el("select", { class:"f-unit" });
-    KNOWN_UNITS.forEach(function(u){ unitSelect.appendChild(el("option", { value:u.v, text:u.label })); });
-    grid.appendChild(fieldWrap("Unidade", unitSelect));
-
-    var scaleInput = el("input", { type:"number", step:"any", class:"f-scale", value:"1" });
-    grid.appendChild(fieldWrap("Escala", scaleInput));
-
-    var offsetInput = el("input", { type:"number", step:"any", class:"f-offset", value:"0" });
-    grid.appendChild(fieldWrap("Offset", offsetInput));
-
-    var rawInput = el("input", { type:"text", class:"f-raw", placeholder:"ex: 13.8 / true / 100" });
-    grid.appendChild(fieldWrap("Valor bruto inicial (raw_value)", rawInput));
-
-    var validitySelect = el("select", { class:"f-validity" });
-    VALIDITY_OPTIONS.forEach(function(v){ validitySelect.appendChild(el("option", { value:v.v, text:v.label })); });
-    grid.appendChild(fieldWrap("Validade nativa", validitySelect));
-
-    var minInput = el("input", { type:"number", step:"any", class:"f-min", placeholder:"sem mínimo" });
-    grid.appendChild(fieldWrap("Mínimo de engenharia", minInput));
-
-    var maxInput = el("input", { type:"number", step:"any", class:"f-max", placeholder:"sem máximo" });
-    grid.appendChild(fieldWrap("Máximo de engenharia", maxInput));
-
-    block.appendChild(grid);
-
-    var flagsWrap = el("div", { style:"margin-top:12px;" }, [ el("span", { class:"lbl", style:"font-size:12.5px; color:var(--text-dim); display:block; margin-bottom:6px;", text:"Flags de qualidade nativas" }) ]);
-    var flagsRow = el("div", { style:"display:flex; gap:14px; flex-wrap:wrap;" });
-    QUALITY_FLAGS.forEach(function(f){
-      var line = el("label", { class:"checkline" }, [
-        el("input", { type:"checkbox", class:"f-flag", value:f }),
-        el("span", { text:f })
-      ]);
-      flagsRow.appendChild(line);
-    });
-    flagsWrap.appendChild(flagsRow);
-    block.appendChild(flagsWrap);
-
-    if (formBindingCount > 0){
-      var removeBtn = el("button", { type:"button", class:"btn btn-sm btn-ghost", style:"margin-top:12px;", text:"remover este protocolo" });
-      removeBtn.addEventListener("click", function(){ block.remove(); });
-      block.appendChild(removeBtn);
-    }
-
-    wrap.appendChild(block);
-  }
-
-  function fieldWrap(label, inputNode){
-    return el("label", { class:"field" }, [ el("span", { class:"lbl", text:label }), inputNode ]);
-  }
-
-  function parseRaw(text, dataType){
-    if (text === "" || text === undefined || text === null) return null;
-    if (dataType === "bool") return /^(true|1|sim)$/i.test(text.trim());
-    if (dataType === "int") { var i = parseInt(text, 10); return isNaN(i) ? text : i; }
-    if (dataType === "float") { var f = parseFloat(text); return isNaN(f) ? text : f; }
-    var n = Number(text);
-    return isNaN(n) ? text : n;
-  }
-
-  function submitMappingForm(wrap){
-    var errorBox = document.getElementById("f-error");
-    errorBox.innerHTML = "";
-    var pointId = document.getElementById("f-point-id").value.trim();
-    if (!pointId){
-      errorBox.appendChild(el("div", { class:"field-error", text:"Informe o identificador do ponto." }));
-      return;
-    }
-    var blocks = wrap.querySelectorAll(".binding-block");
-    if (blocks.length < 2){
-      errorBox.appendChild(el("div", { class:"field-error", text:"O gateway exige ao menos 2 protocolos por ponto." }));
-      return;
-    }
-    var bindings = {};
-    var protoUsed = {};
-    var dup = false;
-    blocks.forEach(function(block){
-      var proto = block.querySelector(".f-protocol").value;
-      if (protoUsed[proto]) dup = true;
-      protoUsed[proto] = true;
-      var dataType = block.querySelector(".f-datatype").value;
-      var flags = Array.prototype.slice.call(block.querySelectorAll(".f-flag:checked")).map(function(i){ return i.value; });
-      var minVal = block.querySelector(".f-min").value;
-      var maxVal = block.querySelector(".f-max").value;
-      var validity = block.querySelector(".f-validity").value;
-      bindings[proto] = {
-        protocol: proto,
-        address: block.querySelector(".f-address").value.trim(),
-        data_type: dataType,
-        unit: block.querySelector(".f-unit").value,
-        scale: parseFloat(block.querySelector(".f-scale").value || "1"),
-        offset: parseFloat(block.querySelector(".f-offset").value || "0"),
-        raw_value: parseRaw(block.querySelector(".f-raw").value.trim(), dataType),
-        native_validity: validity || null,
-        native_quality_flags: flags,
-        min_engineering: minVal === "" ? null : parseFloat(minVal),
-        max_engineering: maxVal === "" ? null : parseFloat(maxVal)
+  <script>
+    (function () {
+      "use strict";
+
+      /* ============ constants ============ */
+      var PROTOCOLS = [
+        { id: "mms", label: "MMS", full: "IEC 61850 MMS" },
+        { id: "dnp3", label: "DNP3", full: "DNP3" },
+        { id: "modbus", label: "Modbus", full: "Modbus" },
+        { id: "opcua", label: "OPC UA", full: "OPC UA" }
+      ];
+      var PROTO_FULL = {}; PROTOCOLS.forEach(function (p) { PROTO_FULL[p.id] = p.full; });
+      var PROTO_LABEL = {}; PROTOCOLS.forEach(function (p) { PROTO_LABEL[p.id] = p.label; });
+      var PROTO_COLOR = { mms: "#4FD1C5", dnp3: "#5B9EF2", modbus: "#F2B84B", opcua: "#3ED598" };
+      var STATUS_META = {
+        ok: { label: "OK — sem perdas", color: "var(--good)", dim: "var(--good-dim)" },
+        perda: { label: "Com perda de metadado", color: "var(--warn)", dim: "var(--warn-dim)" },
+        falha_comm: { label: "Falha de comunicação", color: "var(--bad)", dim: "var(--bad-dim)" },
+        erro: { label: "Erro / config inválida", color: "var(--bad)", dim: "var(--bad-dim)" },
+        info: { label: "Informação do sistema", color: "var(--info)", dim: "var(--info-dim)" }
       };
-    });
-    if (dup){
-      errorBox.appendChild(el("div", { class:"field-error", text:"Você selecionou o mesmo protocolo mais de uma vez." }));
-      return;
-    }
-    apiPost("/api/mappings", { point_id: pointId, bindings: bindings }).then(function(){
-      toast("Ponto '" + pointId + "' cadastrado.", "success");
-      document.getElementById("mapping-form-panel").style.display = "none";
-      loadMappingsTable();
-    }).catch(function(err){
-      errorBox.appendChild(el("div", { class:"field-error", text: err.message }));
-    });
-  }
+      var KIND_LABEL = { convert: "Conversão", info: "Informação", error: "Erro" };
 
-  /* ============ HISTÓRICO ============ */
-  var lastLogId = 0;
-  var logsAccum = [];
-  var openLogIds = {};
+      var DATA_TYPES = ["float", "int", "bool", "string"];
+      var KNOWN_UNITS = [
+        { v: "", label: "(adimensional)" },
+        { v: "V", label: "V — tensão" },
+        { v: "kV", label: "kV — tensão" },
+        { v: "A", label: "A — corrente" },
+        { v: "kA", label: "kA — corrente" },
+        { v: "W", label: "W — potência" },
+        { v: "kW", label: "kW — potência" },
+        { v: "Hz", label: "Hz — frequência" }
+      ];
+      var VALIDITY_OPTIONS = [
+        { v: "", label: "(não informar)" },
+        { v: "good", label: "good" },
+        { v: "invalid", label: "invalid" },
+        { v: "questionable", label: "questionable" }
+      ];
+      var QUALITY_FLAGS = ["overflow", "out_of_range", "forced", "substituted", "test", "comm_lost", "stale", "config_error"];
 
-  function initHistorico(){
-    logsAccum = []; lastLogId = 0;
-    loadLogs();
-    activePolls.logs = setInterval(loadLogs, 4000);
-  }
-
-  function loadLogs(){
-    apiGet("/api/logs?limit=100&since_id=" + lastLogId).then(function(entries){
-      if (entries.length){
-        logsAccum = logsAccum.concat(entries);
-        lastLogId = entries[entries.length - 1].id;
-        renderLogsList();
-      } else if (!logsAccum.length){
-        renderLogsList();
+      /* ============ tiny helpers ============ */
+      function el(tag, attrs, children) {
+        var node = document.createElement(tag);
+        attrs = attrs || {};
+        Object.keys(attrs).forEach(function (k) {
+          if (k === "class") node.className = attrs[k];
+          else if (k === "html") node.innerHTML = attrs[k];
+          else if (k === "text") node.textContent = attrs[k];
+          else if (k.indexOf("on") === 0 && typeof attrs[k] === "function") node.addEventListener(k.slice(2), attrs[k]);
+          else node.setAttribute(k, attrs[k]);
+        });
+        (children || []).forEach(function (c) { if (c) node.appendChild(c); });
+        return node;
       }
-    }).catch(function(err){ reportApiError(err, "Não foi possível carregar o histórico."); });
-  }
-
-  function renderLogsList(){
-    var wrap = document.getElementById("logs-list");
-    wrap.innerHTML = "";
-    if (!logsAccum.length){
-      wrap.appendChild(el("div", { class:"empty-state", text:"Nenhum evento ainda. Rode a demonstração no Painel ou faça uma conversão." }));
-      return;
-    }
-    var ordered = logsAccum.slice().sort(function(a,b){ return b.id - a.id; });
-    ordered.forEach(function(entry){
-      var item = el("div", { class:"log-item kind-" + entry.kind });
-      var isConvert = entry.kind === "convert";
-      var head = el("div", { class:"log-head" }, [
-        el("span", { class:"dot " + (entry.kind === "error" ? "bad" : (entry.failure ? "warn" : "good")) }),
-        el("span", { class:"pid", text: isConvert ? entry.point_id : (entry.message || entry.kind) }),
-        el("span", { class:"ts", text: fmtTime(entry.logged_at) })
-      ]);
-      if (isConvert){
-        head.appendChild(el("span", { class:"hint-line", text:"#" + entry.id + " · " + entry.source_protocol + " →" }));
-        head.addEventListener("click", function(){
-          openLogIds[entry.id] = !openLogIds[entry.id];
-          renderLogsList();
+      function fmtTime(tsSeconds) {
+        try {
+          var d = new Date(tsSeconds * 1000);
+          return d.toLocaleString("pt-BR", { hour12: false });
+        } catch (e) { return ""; }
+      }
+      function fmtIso(iso) {
+        try {
+          var d = new Date(iso);
+          return d.toLocaleString("pt-BR", { hour12: false });
+        } catch (e) { return iso; }
+      }
+      function escapeHtml(s) {
+        return String(s).replace(/[&<>"']/g, function (c) {
+          return { "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" }[c];
         });
       }
-      item.appendChild(head);
-      if (isConvert){
-        var body = el("div", { class:"log-body" + (openLogIds[entry.id] ? " open" : "") });
-        if (openLogIds[entry.id]) body.appendChild(renderReport(entry));
-        item.appendChild(body);
+
+      /* ============ toast ============ */
+      function toast(message, kind) {
+        var region = document.getElementById("toast-region");
+        var node = el("div", { class: "toast" + (kind ? " " + kind : ""), text: message });
+        region.appendChild(node);
+        setTimeout(function () { node.remove(); }, 4200);
       }
-      wrap.appendChild(item);
-    });
-  }
 
-  document.getElementById("btn-refresh-logs").addEventListener("click", function(){
-    lastLogId = 0; logsAccum = []; loadLogs();
-  });
+      /* ============ api layer ============ */
+      function ApiError(message, status) {
+        this.message = message; this.status = status; this.name = "ApiError";
+      }
+      ApiError.prototype = Object.create(Error.prototype);
 
-  document.getElementById("btn-clear-logs").addEventListener("click", function(){
-    if (!confirm("Limpar todo o histórico de eventos?")) return;
-    apiDelete("/api/logs").then(function(){
-      logsAccum = []; lastLogId = 0; openLogIds = {};
-      renderLogsList();
-      toast("Histórico limpo.", "success");
-    }).catch(function(err){ reportApiError(err, "Falha ao limpar histórico."); });
-  });
+      function api(method, path, body) {
+        var opts = { method: method, headers: {} };
+        if (body !== undefined) {
+          opts.headers["Content-Type"] = "application/json";
+          opts.body = JSON.stringify(body);
+        }
+        return fetch(path, opts).catch(function () {
+          throw new ApiError("Não foi possível falar com o servidor (" + path + "). O backend está rodando?", 0);
+        }).then(function (res) {
+          return res.text().then(function (text) {
+            var data = null;
+            if (text) {
+              try { data = JSON.parse(text); } catch (e) { data = text; }
+            }
+            if (!res.ok) {
+              var msg = (data && typeof data === "object" && "detail" in data) ? data.detail
+                : (typeof data === "string" && data) ? data
+                  : ("Erro " + res.status);
+              throw new ApiError(msg, res.status);
+            }
+            return data;
+          });
+        });
+      }
+      function apiGet(path) { return api("GET", path); }
+      function apiPost(path, body) { return api("POST", path, body === undefined ? {} : body); }
+      function apiDelete(path) { return api("DELETE", path); }
 
-  /* ============ help modal ============ */
-  var helpBackdrop = document.getElementById("help-backdrop");
-  document.getElementById("btn-help").addEventListener("click", function(){ helpBackdrop.classList.add("open"); });
-  document.getElementById("btn-help-close").addEventListener("click", function(){ helpBackdrop.classList.remove("open"); });
-  helpBackdrop.addEventListener("click", function(ev){ if (ev.target === helpBackdrop) helpBackdrop.classList.remove("open"); });
-  document.addEventListener("keydown", function(ev){ if (ev.key === "Escape") helpBackdrop.classList.remove("open"); });
+      function reportApiError(err, fallback) {
+        var msg = (err && err.message) ? err.message : (fallback || "Ocorreu um erro inesperado.");
+        toast(msg, "error");
+      }
 
-  /* ============ boot ============ */
-  var startView = (location.hash || "").replace("#","");
-  if (["painel","conversor","mapeamentos","historico"].indexOf(startView) === -1) startView = "painel";
-  showView(startView);
+      /* ============ view switching ============ */
+      var activePolls = {};
+      function clearPoll(name) { if (activePolls[name]) { clearInterval(activePolls[name]); delete activePolls[name]; } }
 
-})();
-</script>
+      var VIEW_INIT = {
+        painel: initPainel,
+        conversor: initConversor,
+        mapeamentos: initMapeamentos,
+        historico: initHistorico
+      };
+
+      function showView(name) {
+        document.querySelectorAll(".tab").forEach(function (t) {
+          t.classList.toggle("active", t.dataset.view === name);
+          t.setAttribute("aria-selected", t.dataset.view === name ? "true" : "false");
+        });
+        document.querySelectorAll(".view").forEach(function (v) {
+          v.classList.toggle("active", v.id === "view-" + name);
+        });
+        clearPoll("adapters");
+        clearPoll("logs");
+        if (VIEW_INIT[name]) VIEW_INIT[name]();
+        location.hash = name;
+      }
+
+      document.querySelectorAll(".tab").forEach(function (t) {
+        t.addEventListener("click", function () { showView(t.dataset.view); });
+      });
+
+      /* ============ shared renderers ============ */
+      function circuitPill(state) {
+        var map = {
+          closed: { cls: "good", label: "operando" },
+          open: { cls: "bad", label: "circuito aberto" },
+          half_open: { cls: "warn", label: "testando reconexão" }
+        };
+        var m = map[state] || { cls: "off", label: state || "desconhecido" };
+        return el("span", { class: "pill " + m.cls, text: m.label });
+      }
+
+      function protocolBadge(id) {
+        return el("span", { class: "badge-proto", text: PROTO_LABEL[id] || id });
+      }
+
+      function qualityInline(q) {
+        var flags = (q.flags && q.flags.length) ? q.flags.join(",") : "-";
+        var cls = q.validity === "good" ? "good" : (q.validity === "questionable" ? "warn" : "bad");
+        return el("span", { class: "pill " + cls, text: q.validity + "[" + flags + "]" });
+      }
+
+      function barList(container, data) {
+        container.innerHTML = "";
+        if (!data || !data.length) {
+          container.appendChild(el("div", { class: "chart-empty", text: "Sem dados para os filtros atuais." }));
+          return;
+        }
+        var max = Math.max.apply(null, data.map(function (d) { return d.value; })) || 1;
+        data.forEach(function (d) {
+          var pct = Math.max(3, Math.round((d.value / max) * 100));
+          var row = el("div", { class: "bar-row" });
+          row.appendChild(el("span", { class: "bl", text: d.label, title: d.label }));
+          var track = el("div", { class: "bt" });
+          track.appendChild(el("div", { class: "bf", style: "width:" + pct + "%; background:" + (d.color || "var(--accent)") + ";" }));
+          row.appendChild(track);
+          row.appendChild(el("span", { class: "bv", text: String(d.value) }));
+          container.appendChild(row);
+        });
+      }
+
+      function chartBox(title, data) {
+        var box = el("div", { class: "chart-box" });
+        box.appendChild(el("h3", { text: title }));
+        var body = el("div");
+        barList(body, data);
+        box.appendChild(body);
+        return box;
+      }
+
+      function statusPill(statusKey) {
+        var m = STATUS_META[statusKey] || { label: statusKey, color: "var(--text-dim)", dim: "var(--off-dim)" };
+        return el("span", { class: "pill", style: "background:" + m.dim + "; color:" + m.color + ";", text: m.label });
+      }
+
+      function renderLoss(loss) {
+        return el("div", { class: "loss-row " + loss.severity }, [
+          el("span", { class: "code", text: "[" + loss.severity.toUpperCase() + "] " + loss.code }),
+          el("span", { text: loss.message + (loss.affected_value !== null && loss.affected_value !== undefined ? " (valor: " + loss.affected_value + ")" : "") })
+        ]);
+      }
+
+      function renderCanonicalBlock(c) {
+        if (!c) return el("div", { class: "empty-state", text: "Sem leitura da origem." });
+        var wrap = el("div", { class: "canon-block" });
+        function kv(label, valueNode) {
+          var box = el("div", { class: "kv" });
+          box.appendChild(el("span", { class: "k", text: label }));
+          var v = el("span", { class: "v" });
+          if (typeof valueNode === "string") v.textContent = valueNode; else v.appendChild(valueNode);
+          box.appendChild(v);
+          wrap.appendChild(box);
+        }
+        kv("Valor", (c.value === null ? "—" : String(c.value)) + (c.unit ? " " + c.unit : ""));
+        kv("Tipo", c.data_type);
+        kv("Qualidade", qualityInline(c.quality));
+        kv("Timestamp", fmtIso(c.timestamp.value_utc) + " · " + c.timestamp.sync_source);
+        return wrap;
+      }
+
+      function renderTargetCard(protocol, data) {
+        if (data && data.error) {
+          return el("div", { class: "target-card errored" }, [
+            el("div", { class: "th" }, [el("span", { class: "proto", text: PROTO_LABEL[protocol] || protocol }), el("span", { class: "pill bad", text: "sem binding" })]),
+            el("div", { text: data.error, style: "color:var(--bad); font-size:12.5px;" })
+          ]);
+        }
+        var card = el("div", { class: "target-card" });
+        var head = el("div", { class: "th" }, [el("span", { class: "proto", text: PROTO_LABEL[protocol] || protocol })]);
+        if (data.status_code_severity) {
+          var sevCls = data.status_code_severity === "Good" ? "good" : (data.status_code_severity === "Uncertain" ? "warn" : "bad");
+          head.appendChild(el("span", { class: "pill " + sevCls, text: "StatusCode " + data.status_code_severity }));
+        }
+        card.appendChild(head);
+        card.appendChild(el("div", { class: "addr", text: "endereço " + data.address }));
+        card.appendChild(el("div", { class: "written", text: String(data.written_value) }));
+        if (data.quality) card.appendChild(el("div", { style: "margin-bottom:6px;" }, [qualityInline(data.quality)]));
+        if (data.timestamp) card.appendChild(el("div", { class: "hint-line", text: fmtIso(data.timestamp.value_utc) }));
+        if (data.losses && data.losses.length) {
+          data.losses.forEach(function (loss) { card.appendChild(renderLoss(loss)); });
+        } else {
+          card.appendChild(el("div", { class: "no-loss", text: "✓ nenhuma perda de metadados" }));
+        }
+        return card;
+      }
+
+      function renderReport(report) {
+        var wrap = el("div");
+        if (report.failure) {
+          wrap.appendChild(el("div", { class: "failure-banner" }, [
+            el("span", { html: "⚠" }),
+            el("span", {}, [el("b", { text: "Falha na leitura da origem: " }), document.createTextNode(report.failure + ". O valor foi congelado no último bom conhecido.")])
+          ]));
+        }
+        wrap.appendChild(renderCanonicalBlock(report.canonical));
+        Object.keys(report.targets || {}).forEach(function (proto) {
+          wrap.appendChild(renderTargetCard(proto, report.targets[proto]));
+        });
+        return wrap;
+      }
+
+      /* ============ PAINEL ============ */
+      function initPainel() {
+        loadAdapters();
+        loadPointsQuick();
+        loadDashboardSummary();
+        activePolls.adapters = setInterval(function () { loadAdapters(); loadDashboardSummary(); }, 5000);
+      }
+
+      function loadDashboardSummary() {
+        Promise.all([
+          apiGet("/api/mappings"),
+          apiGet("/api/adapters"),
+          apiGet("/api/logs?limit=300")
+        ]).then(function (results) {
+          var mappings = results[0], adaptersInfo = results[1], logs = results[2];
+
+          var connectedCount = Object.keys(adaptersInfo).filter(function (k) { return adaptersInfo[k].connected; }).length;
+          var openCircuits = Object.keys(adaptersInfo).filter(function (k) { return adaptersInfo[k].circuit_state === "open"; }).length;
+          var totalEvents = logs.length;
+          var failedEvents = logs.filter(function (e) { return e.kind === "convert" && e.failure; }).length;
+          var lossEvents = logs.filter(function (e) {
+            if (e.kind !== "convert") return false;
+            return Object.keys(e.targets || {}).some(function (p) { var t = e.targets[p]; return t && t.losses && t.losses.length; });
+          }).length;
+
+          var grid = document.getElementById("dash-stats-grid");
+          grid.innerHTML = "";
+          function stat(label, value, sub) {
+            grid.appendChild(el("div", { class: "stat-card" }, [
+              el("span", { class: "stat-label", text: label }),
+              el("span", { class: "stat-value", text: String(value) }),
+              sub ? el("span", { class: "stat-sub", text: sub }) : null
+            ]));
+          }
+          stat("Pontos cadastrados", mappings.length);
+          stat("Adaptadores conectados", connectedCount + "/4", openCircuits ? openCircuits + " circuito(s) aberto(s)" : "todos operando");
+          stat("Eventos na sessão", totalEvents, failedEvents ? failedEvents + " com falha de comunicação" : "sem falhas registradas");
+          stat("Eventos com perda de metadado", lossEvents, totalEvents ? Math.round((lossEvents / totalEvents) * 100) + "% do total de eventos" : "");
+
+          var byProto = {};
+          mappings.forEach(function (m) { m.protocols.forEach(function (p) { byProto[p] = (byProto[p] || 0) + 1; }); });
+          var protoData = PROTOCOLS.filter(function (p) { return byProto[p.id]; })
+            .map(function (p) { return { label: p.label, value: byProto[p.id], color: PROTO_COLOR[p.id] }; });
+          barList(document.getElementById("dash-chart-protocols"), protoData);
+
+          var byKind = {};
+          logs.forEach(function (e) { byKind[e.kind] = (byKind[e.kind] || 0) + 1; });
+          var kindData = Object.keys(byKind).map(function (k) { return { label: KIND_LABEL[k] || k, value: byKind[k], color: "var(--accent)" }; });
+          barList(document.getElementById("dash-chart-eventkinds"), kindData);
+        }).catch(function (err) { reportApiError(err, "Não foi possível carregar o resumo do painel."); });
+      }
+
+      function loadAdapters() {
+        apiGet("/api/adapters").then(function (data) {
+          var grid = document.getElementById("adapters-grid");
+          grid.innerHTML = "";
+          PROTOCOLS.forEach(function (p) {
+            var info = data[p.id] || { connected: false, circuit_state: "closed" };
+            var card = el("div", { class: "adapter-card" });
+            var top = el("div", { class: "row-top" }, [
+              el("div", {}, [
+                el("div", { class: "proto-name", text: p.label }),
+                el("div", { class: "proto-full", text: p.full })
+              ])
+            ]);
+            var sw = el("label", { class: "switch", title: info.connected ? "Desligar comunicação" : "Ligar comunicação" });
+            var input = el("input", { type: "checkbox" });
+            input.checked = !!info.connected;
+            input.addEventListener("change", function () {
+              setAdapterConnection(p.id, input.checked);
+            });
+            sw.appendChild(input);
+            sw.appendChild(el("span", { class: "track" }, [el("span", { class: "thumb" })]));
+            top.appendChild(sw);
+            card.appendChild(top);
+            card.appendChild(el("div", { style: "display:flex; align-items:center; gap:8px;" }, [
+              el("span", { class: "dot " + (info.connected ? "good" : "off") }),
+              el("span", { style: "font-size:12px; color:var(--text-dim);", text: info.connected ? "conectado" : "desconectado" })
+            ]));
+            card.appendChild(circuitPill(info.circuit_state));
+            grid.appendChild(card);
+          });
+          document.getElementById("adapters-updated").textContent = "atualizado às " + new Date().toLocaleTimeString("pt-BR", { hour12: false });
+        }).catch(function (err) { reportApiError(err, "Não foi possível carregar os adaptadores."); });
+      }
+
+      function setAdapterConnection(protocol, connected) {
+        apiPost("/api/adapters/" + protocol + "/connection", { connected: connected }).then(function () {
+          toast((connected ? "Adaptador '" + protocol + "' religado." : "Adaptador '" + protocol + "' desligado — comunicação indisponível."), connected ? "success" : "");
+          loadAdapters();
+        }).catch(function (err) { reportApiError(err, "Não foi possível alterar a conexão."); loadAdapters(); });
+      }
+
+      document.getElementById("btn-run-demo").addEventListener("click", function () {
+        var btn = document.getElementById("btn-run-demo");
+        btn.disabled = true;
+        document.getElementById("demo-feedback").textContent = "rodando…";
+        apiPost("/api/demo").then(function (entries) {
+          document.getElementById("demo-feedback").textContent = entries.length + " evento(s) gerado(s) — veja em Histórico.";
+          toast("Demonstração concluída: " + entries.length + " evento(s) registrado(s).", "success");
+          loadAdapters();
+          loadDashboardSummary();
+        }).catch(function (err) {
+          reportApiError(err, "Falha ao rodar a demonstração.");
+          document.getElementById("demo-feedback").textContent = "";
+        }).then(function () { btn.disabled = false; });
+      });
+
+      function loadPointsQuick() {
+        apiGet("/api/mappings").then(function (list) {
+          var grid = document.getElementById("points-quick-grid");
+          grid.innerHTML = "";
+          document.getElementById("points-count").textContent = "(" + list.length + ")";
+          if (!list.length) {
+            grid.appendChild(el("div", { class: "empty-state", text: "Nenhum ponto cadastrado ainda. Vá em Mapeamentos → Novo ponto." }));
+            return;
+          }
+          list.forEach(function (m) {
+            var card = el("button", {
+              type: "button", class: "point-card", onclick: function () {
+                conversorState.presetPoint = m.point_id;
+                showView("conversor");
+              }
+            });
+            card.appendChild(el("div", { class: "pid", text: m.point_id }));
+            var row = el("div", { class: "protos" });
+            m.protocols.forEach(function (p) { row.appendChild(protocolBadge(p)); });
+            card.appendChild(row);
+            grid.appendChild(card);
+          });
+        }).catch(function (err) { reportApiError(err, "Não foi possível carregar os pontos."); });
+      }
+
+      /* ============ CONVERSOR ============ */
+      var conversorState = { pointId: null, bindings: null, source: null, targets: {}, presetPoint: null };
+
+      function initConversor() {
+        var select = document.getElementById("conv-point-select");
+        apiGet("/api/mappings").then(function (list) {
+          select.innerHTML = "<option value=''>Selecione um ponto…</option>";
+          list.forEach(function (m) {
+            var opt = el("option", { value: m.point_id, text: m.point_id + "  (" + m.protocols.join(", ") + ")" });
+            select.appendChild(opt);
+          });
+          if (conversorState.presetPoint) {
+            select.value = conversorState.presetPoint;
+            conversorState.presetPoint = null;
+            onConvPointChange();
+          }
+        }).catch(function (err) { reportApiError(err, "Não foi possível carregar os pontos."); });
+      }
+
+      document.getElementById("conv-point-select").addEventListener("change", onConvPointChange);
+
+      function onConvPointChange() {
+        var pointId = document.getElementById("conv-point-select").value;
+        conversorState.pointId = pointId || null;
+        conversorState.source = null;
+        conversorState.targets = {};
+        document.getElementById("conv-source-panel").style.display = "none";
+        document.getElementById("conv-target-panel").style.display = "none";
+        document.getElementById("conv-result").innerHTML = "";
+        if (!pointId) return;
+        apiGet("/api/mappings/" + encodeURIComponent(pointId)).then(function (detail) {
+          conversorState.bindings = detail.bindings;
+          renderSourceChips();
+        }).catch(function (err) { reportApiError(err, "Não foi possível carregar o ponto."); });
+      }
+
+      function renderSourceChips() {
+        var wrap = document.getElementById("conv-source-chips");
+        wrap.innerHTML = "";
+        var available = Object.keys(conversorState.bindings);
+        PROTOCOLS.forEach(function (p) {
+          if (available.indexOf(p.id) === -1) return;
+          var chip = el("button", { type: "button", class: "chip", text: p.label });
+          chip.addEventListener("click", function () {
+            conversorState.source = p.id;
+            conversorState.targets = {};
+            wrap.querySelectorAll(".chip").forEach(function (c) { c.classList.remove("selected"); });
+            chip.classList.add("selected");
+            renderTargetChips();
+          });
+          wrap.appendChild(chip);
+        });
+        document.getElementById("conv-source-panel").style.display = "block";
+        document.getElementById("conv-target-panel").style.display = "none";
+        document.getElementById("conv-result").innerHTML = "";
+      }
+
+      function renderTargetChips() {
+        var wrap = document.getElementById("conv-target-chips");
+        wrap.innerHTML = "";
+        PROTOCOLS.forEach(function (p) {
+          if (p.id === conversorState.source) return;
+          var hasBinding = !!conversorState.bindings[p.id];
+          var chip = el("button", { type: "button", class: "chip" });
+          chip.appendChild(document.createTextNode(p.label));
+          if (!hasBinding) chip.appendChild(el("span", { class: "hint", text: "sem binding" }));
+          chip.addEventListener("click", function () {
+            conversorState.targets[p.id] = !conversorState.targets[p.id];
+            chip.classList.toggle("selected", !!conversorState.targets[p.id]);
+            updateConvertButton();
+          });
+          wrap.appendChild(chip);
+        });
+        document.getElementById("conv-target-panel").style.display = "block";
+        document.getElementById("conv-result").innerHTML = "";
+        updateConvertButton();
+      }
+
+      function updateConvertButton() {
+        var anyTarget = Object.keys(conversorState.targets).some(function (k) { return conversorState.targets[k]; });
+        document.getElementById("btn-convert").disabled = !anyTarget;
+        document.getElementById("conv-hint").textContent = anyTarget ? "" : "escolha ao menos um destino";
+      }
+
+      document.getElementById("btn-convert").addEventListener("click", function () {
+        var targets = Object.keys(conversorState.targets).filter(function (k) { return conversorState.targets[k]; });
+        var btn = document.getElementById("btn-convert");
+        btn.disabled = true;
+        apiPost("/api/convert", { point_id: conversorState.pointId, source: conversorState.source, targets: targets })
+          .then(function (report) {
+            document.getElementById("conv-result").innerHTML = "";
+            document.getElementById("conv-result").appendChild(renderReport(report));
+          })
+          .catch(function (err) { reportApiError(err, "Falha ao converter."); })
+          .then(function () { btn.disabled = false; updateConvertButton(); });
+      });
+
+      /* ============ MAPEAMENTOS ============ */
+      function initMapeamentos() {
+        document.getElementById("mapping-detail-panel").style.display = "none";
+        document.getElementById("mapping-form-panel").style.display = "none";
+        loadMappingsTable();
+      }
+
+      function loadMappingsTable() {
+        apiGet("/api/mappings").then(function (list) {
+          var wrap = document.getElementById("mappings-table-wrap");
+          wrap.innerHTML = "";
+          if (!list.length) {
+            wrap.appendChild(el("div", { class: "empty-state", text: "Nenhum ponto cadastrado. Use “Novo ponto” para começar." }));
+            return;
+          }
+          var table = el("table", { class: "data" });
+          table.appendChild(el("thead", {}, [el("tr", {}, [
+            el("th", { text: "Ponto" }), el("th", { text: "Protocolos" }), el("th", { text: "" })
+          ])]));
+          var tbody = el("tbody");
+          list.forEach(function (m) {
+            var tr = el("tr", { class: "clickable" });
+            tr.appendChild(el("td", { class: "pid", text: m.point_id }));
+            var protoCell = el("td");
+            m.protocols.forEach(function (p) { protoCell.appendChild(protocolBadge(p)); protoCell.appendChild(document.createTextNode(" ")); });
+            tr.appendChild(protoCell);
+            tr.appendChild(el("td", {}, [el("button", { class: "btn btn-sm", text: "ver", onclick: function (ev) { ev.stopPropagation(); showMappingDetail(m.point_id); } })]));
+            tr.addEventListener("click", function () { showMappingDetail(m.point_id); });
+            tbody.appendChild(tr);
+          });
+          table.appendChild(tbody);
+          wrap.appendChild(table);
+        }).catch(function (err) { reportApiError(err, "Não foi possível carregar os mapeamentos."); });
+      }
+
+      document.getElementById("btn-validate-all").addEventListener("click", function () {
+        apiPost("/api/mappings/validate").then(function (results) {
+          var ok = Object.keys(results).filter(function (k) { return results[k] === null; }).length;
+          var total = Object.keys(results).length;
+          var failed = Object.keys(results).filter(function (k) { return results[k] !== null; });
+          if (failed.length) {
+            toast(ok + "/" + total + " válidos. Falhas: " + failed.map(function (k) { return k + " — " + results[k]; }).join(" | "), "error");
+          } else {
+            toast("Todos os " + total + " ponto(s) são válidos.", "success");
+          }
+        }).catch(function (err) { reportApiError(err, "Falha ao validar."); });
+      });
+
+      function showMappingDetail(pointId) {
+        document.getElementById("mapping-form-panel").style.display = "none";
+        var panel = document.getElementById("mapping-detail-panel");
+        panel.style.display = "block";
+        panel.innerHTML = "<h2>Carregando…</h2>";
+        apiGet("/api/mappings/" + encodeURIComponent(pointId)).then(function (detail) {
+          panel.innerHTML = "";
+          var head = el("h2", {}, [
+            el("span", { class: "mono", text: detail.point_id }),
+            el("span", { style: "display:flex; gap:8px;" }, [
+              el("button", { class: "btn btn-sm", text: "Validar", onclick: function () { validateOne(pointId); } }),
+              el("button", { class: "btn btn-sm btn-danger", text: "Excluir", onclick: function () { deleteMapping(pointId); } }),
+              el("button", { class: "btn btn-sm btn-ghost", text: "Fechar", onclick: function () { panel.style.display = "none"; } })
+            ])
+          ]);
+          panel.appendChild(head);
+          panel.appendChild(el("div", { id: "mapping-validate-result" }));
+
+          var table = el("table", { class: "data" });
+          table.appendChild(el("thead", {}, [el("tr", {}, [
+            "Protocolo", "Endereço", "Tipo", "Unidade", "Escala", "Offset", "Validade nativa", "Flags nativas", "Faixa"
+          ].map(function (t) { return el("th", { text: t }); }))]));
+          var tbody = el("tbody");
+          Object.keys(detail.bindings).forEach(function (proto) {
+            var b = detail.bindings[proto];
+            tbody.appendChild(el("tr", {}, [
+              el("td", {}, [protocolBadge(proto)]),
+              el("td", { class: "mono", text: b.address }),
+              el("td", { text: b.data_type }),
+              el("td", { text: b.unit || "—" }),
+              el("td", { text: String(b.scale) }),
+              el("td", { text: String(b.offset) }),
+              el("td", { text: b.native_validity || "—" }),
+              el("td", { text: (b.native_quality_flags && b.native_quality_flags.length) ? b.native_quality_flags.join(", ") : "—" }),
+              el("td", { text: (b.min_engineering === null && b.max_engineering === null) ? "—" : ((b.min_engineering !== null ? b.min_engineering : "−∞") + " … " + (b.max_engineering !== null ? b.max_engineering : "+∞")) })
+            ]));
+          });
+          table.appendChild(tbody);
+          panel.appendChild(table);
+          panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        }).catch(function (err) { reportApiError(err, "Não foi possível carregar o ponto."); panel.style.display = "none"; });
+      }
+
+      function validateOne(pointId) {
+        apiPost("/api/mappings/validate?point_id=" + encodeURIComponent(pointId)).then(function (res) {
+          var msg = res[pointId];
+          var box = document.getElementById("mapping-validate-result");
+          if (box) box.innerHTML = "";
+          if (msg) {
+            toast(pointId + ": " + msg, "error");
+            if (box) box.appendChild(el("div", { class: "field-error", text: msg }));
+          } else {
+            toast(pointId + ": mapeamento válido.", "success");
+          }
+        }).catch(function (err) { reportApiError(err, "Falha ao validar."); });
+      }
+
+      function deleteMapping(pointId) {
+        if (!confirm("Excluir o ponto '" + pointId + "'? Essa ação não pode ser desfeita.")) return;
+        apiDelete("/api/mappings/" + encodeURIComponent(pointId)).then(function () {
+          toast("Ponto '" + pointId + "' removido.", "success");
+          document.getElementById("mapping-detail-panel").style.display = "none";
+          loadMappingsTable();
+        }).catch(function (err) { reportApiError(err, "Falha ao excluir."); });
+      }
+
+      /* ---- new mapping form ---- */
+      var formBindingCount = 0;
+
+      document.getElementById("btn-new-mapping").addEventListener("click", function () {
+        document.getElementById("mapping-detail-panel").style.display = "none";
+        openMappingForm();
+      });
+
+      function openMappingForm() {
+        var panel = document.getElementById("mapping-form-panel");
+        panel.style.display = "block";
+        panel.innerHTML = "";
+        panel.appendChild(el("h2", {}, [
+          el("span", { text: "Novo ponto" }),
+          el("button", { class: "btn btn-sm btn-ghost", text: "Fechar", onclick: function () { panel.style.display = "none"; } })
+        ]));
+
+        var form = el("form");
+        var pointIdField = el("label", { class: "field", style: "max-width:340px; margin-bottom:14px;" }, [
+          el("span", { class: "lbl", text: "Identificador do ponto (point_id)" }),
+          el("input", { type: "text", id: "f-point-id", placeholder: "ex: SE02.MMXU2.PhV.phsB", required: "required" })
+        ]);
+        form.appendChild(pointIdField);
+
+        var bindingsWrap = el("div", { id: "f-bindings-wrap" });
+        form.appendChild(bindingsWrap);
+
+        formBindingCount = 0;
+        addBindingBlock(bindingsWrap);
+        addBindingBlock(bindingsWrap);
+
+        var addBtn = el("button", { type: "button", class: "btn btn-sm", text: "+ adicionar protocolo" });
+        addBtn.addEventListener("click", function () { addBindingBlock(bindingsWrap); });
+        form.appendChild(addBtn);
+
+        form.appendChild(el("div", { id: "f-error" }));
+
+        var actions = el("div", { style: "margin-top:16px; display:flex; gap:10px;" }, [
+          el("button", { type: "submit", class: "btn btn-primary", text: "Cadastrar ponto" })
+        ]);
+        form.appendChild(actions);
+
+        form.addEventListener("submit", function (ev) {
+          ev.preventDefault();
+          submitMappingForm(bindingsWrap);
+        });
+
+        panel.appendChild(form);
+        panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }
+
+      function addBindingBlock(wrap) {
+        formBindingCount += 1;
+        var idx = formBindingCount;
+        var block = el("fieldset", { class: "binding-block", "data-idx": idx });
+        block.appendChild(el("legend", { text: "binding #" + idx }));
+
+        var grid = el("div", { class: "grid cols-3" });
+
+        var protoSelect = el("select", { class: "f-protocol" });
+        PROTOCOLS.forEach(function (p) { protoSelect.appendChild(el("option", { value: p.id, text: p.full })); });
+        protoSelect.selectedIndex = (idx - 1) % PROTOCOLS.length;
+        grid.appendChild(fieldWrap("Protocolo", protoSelect));
+
+        var addrInput = el("input", { type: "text", class: "f-address", placeholder: "ex: 40010 / ns=2;s=Point / BI12" });
+        grid.appendChild(fieldWrap("Endereço", addrInput));
+
+        var typeSelect = el("select", { class: "f-datatype" });
+        DATA_TYPES.forEach(function (t) { typeSelect.appendChild(el("option", { value: t, text: t })); });
+        grid.appendChild(fieldWrap("Tipo de dado", typeSelect));
+
+        var unitSelect = el("select", { class: "f-unit" });
+        KNOWN_UNITS.forEach(function (u) { unitSelect.appendChild(el("option", { value: u.v, text: u.label })); });
+        grid.appendChild(fieldWrap("Unidade", unitSelect));
+
+        var scaleInput = el("input", { type: "number", step: "any", class: "f-scale", value: "1" });
+        grid.appendChild(fieldWrap("Escala", scaleInput));
+
+        var offsetInput = el("input", { type: "number", step: "any", class: "f-offset", value: "0" });
+        grid.appendChild(fieldWrap("Offset", offsetInput));
+
+        var rawInput = el("input", { type: "text", class: "f-raw", placeholder: "ex: 13.8 / true / 100" });
+        grid.appendChild(fieldWrap("Valor bruto inicial (raw_value)", rawInput));
+
+        var validitySelect = el("select", { class: "f-validity" });
+        VALIDITY_OPTIONS.forEach(function (v) { validitySelect.appendChild(el("option", { value: v.v, text: v.label })); });
+        grid.appendChild(fieldWrap("Validade nativa", validitySelect));
+
+        var minInput = el("input", { type: "number", step: "any", class: "f-min", placeholder: "sem mínimo" });
+        grid.appendChild(fieldWrap("Mínimo de engenharia", minInput));
+
+        var maxInput = el("input", { type: "number", step: "any", class: "f-max", placeholder: "sem máximo" });
+        grid.appendChild(fieldWrap("Máximo de engenharia", maxInput));
+
+        block.appendChild(grid);
+
+        var flagsWrap = el("div", { style: "margin-top:12px;" }, [el("span", { class: "lbl", style: "font-size:12.5px; color:var(--text-dim); display:block; margin-bottom:6px;", text: "Flags de qualidade nativas" })]);
+        var flagsRow = el("div", { style: "display:flex; gap:14px; flex-wrap:wrap;" });
+        QUALITY_FLAGS.forEach(function (f) {
+          var line = el("label", { class: "checkline" }, [
+            el("input", { type: "checkbox", class: "f-flag", value: f }),
+            el("span", { text: f })
+          ]);
+          flagsRow.appendChild(line);
+        });
+        flagsWrap.appendChild(flagsRow);
+        block.appendChild(flagsWrap);
+
+        if (formBindingCount > 0) {
+          var removeBtn = el("button", { type: "button", class: "btn btn-sm btn-ghost", style: "margin-top:12px;", text: "remover este protocolo" });
+          removeBtn.addEventListener("click", function () { block.remove(); });
+          block.appendChild(removeBtn);
+        }
+
+        wrap.appendChild(block);
+      }
+
+      function fieldWrap(label, inputNode) {
+        return el("label", { class: "field" }, [el("span", { class: "lbl", text: label }), inputNode]);
+      }
+
+      function parseRaw(text, dataType) {
+        if (text === "" || text === undefined || text === null) return null;
+        if (dataType === "bool") return /^(true|1|sim)$/i.test(text.trim());
+        if (dataType === "int") { var i = parseInt(text, 10); return isNaN(i) ? text : i; }
+        if (dataType === "float") { var f = parseFloat(text); return isNaN(f) ? text : f; }
+        var n = Number(text);
+        return isNaN(n) ? text : n;
+      }
+
+      function submitMappingForm(wrap) {
+        var errorBox = document.getElementById("f-error");
+        errorBox.innerHTML = "";
+        var pointId = document.getElementById("f-point-id").value.trim();
+        if (!pointId) {
+          errorBox.appendChild(el("div", { class: "field-error", text: "Informe o identificador do ponto." }));
+          return;
+        }
+        var blocks = wrap.querySelectorAll(".binding-block");
+        if (blocks.length < 2) {
+          errorBox.appendChild(el("div", { class: "field-error", text: "O gateway exige ao menos 2 protocolos por ponto." }));
+          return;
+        }
+        var bindings = {};
+        var protoUsed = {};
+        var dup = false;
+        blocks.forEach(function (block) {
+          var proto = block.querySelector(".f-protocol").value;
+          if (protoUsed[proto]) dup = true;
+          protoUsed[proto] = true;
+          var dataType = block.querySelector(".f-datatype").value;
+          var flags = Array.prototype.slice.call(block.querySelectorAll(".f-flag:checked")).map(function (i) { return i.value; });
+          var minVal = block.querySelector(".f-min").value;
+          var maxVal = block.querySelector(".f-max").value;
+          var validity = block.querySelector(".f-validity").value;
+          bindings[proto] = {
+            protocol: proto,
+            address: block.querySelector(".f-address").value.trim(),
+            data_type: dataType,
+            unit: block.querySelector(".f-unit").value,
+            scale: parseFloat(block.querySelector(".f-scale").value || "1"),
+            offset: parseFloat(block.querySelector(".f-offset").value || "0"),
+            raw_value: parseRaw(block.querySelector(".f-raw").value.trim(), dataType),
+            native_validity: validity || null,
+            native_quality_flags: flags,
+            min_engineering: minVal === "" ? null : parseFloat(minVal),
+            max_engineering: maxVal === "" ? null : parseFloat(maxVal)
+          };
+        });
+        if (dup) {
+          errorBox.appendChild(el("div", { class: "field-error", text: "Você selecionou o mesmo protocolo mais de uma vez." }));
+          return;
+        }
+        apiPost("/api/mappings", { point_id: pointId, bindings: bindings }).then(function () {
+          toast("Ponto '" + pointId + "' cadastrado.", "success");
+          document.getElementById("mapping-form-panel").style.display = "none";
+          loadMappingsTable();
+        }).catch(function (err) {
+          errorBox.appendChild(el("div", { class: "field-error", text: err.message }));
+        });
+      }
+
+      /* ============ HISTÓRICO ============ */
+      var lastLogId = 0;
+      var logsAccum = [];
+      var openLogIds = {};
+      var historicoInited = false;
+      var historicoState = {
+        search: "",
+        protocols: {},   // proto id -> true when selected as filter
+        statuses: {},    // status key -> true when selected as filter
+        sort: "time_desc",
+        group: "none",
+        view: "lista"
+      };
+
+      function entryProtocols(entry) {
+        var set = {};
+        if (entry.source_protocol) set[entry.source_protocol] = true;
+        Object.keys(entry.targets || {}).forEach(function (p) { set[p] = true; });
+        var keys = Object.keys(set);
+        return keys.length ? keys : ["sistema"];
+      }
+
+      function entryLossCount(entry) {
+        var n = 0;
+        Object.keys(entry.targets || {}).forEach(function (p) {
+          var t = entry.targets[p];
+          if (t && t.losses) n += t.losses.length;
+        });
+        return n;
+      }
+
+      function entryLabel(entry) {
+        return entry.kind === "convert" ? entry.point_id : (entry.message || entry.kind);
+      }
+
+      function classifyEntry(entry) {
+        if (entry.kind === "error") return "erro";
+        if (entry.kind === "info") return "info";
+        if (entry.failure) return "falha_comm";
+        return entryLossCount(entry) > 0 ? "perda" : "ok";
+      }
+
+      function initHistorico() {
+        logsAccum = []; lastLogId = 0;
+        if (!historicoInited) bindHistoricoToolbar();
+        loadLogs();
+        activePolls.logs = setInterval(loadLogs, 4000);
+      }
+
+      function bindHistoricoToolbar() {
+        historicoInited = true;
+
+        var protocolOptions = PROTOCOLS.map(function (p) { return { id: p.id, label: p.label }; })
+          .concat([{ id: "sistema", label: "Sistema" }]);
+        renderFilterChips(document.getElementById("hist-filter-protocol"), protocolOptions, historicoState.protocols, function () { renderHistorico(); });
+
+        var statusOptions = Object.keys(STATUS_META).map(function (k) { return { id: k, label: STATUS_META[k].label }; });
+        renderFilterChips(document.getElementById("hist-filter-status"), statusOptions, historicoState.statuses, function () { renderHistorico(); });
+
+        document.getElementById("hist-search").addEventListener("input", function (ev) {
+          historicoState.search = ev.target.value;
+          renderHistorico();
+        });
+        document.getElementById("hist-sort").addEventListener("change", function (ev) {
+          historicoState.sort = ev.target.value;
+          renderHistorico();
+        });
+        document.getElementById("hist-group").addEventListener("change", function (ev) {
+          historicoState.group = ev.target.value;
+          renderHistorico();
+        });
+        document.querySelectorAll("#hist-view-switch .subtab").forEach(function (btn) {
+          btn.addEventListener("click", function () { setHistView(btn.dataset.hview); });
+        });
+      }
+
+      function renderFilterChips(container, options, selectedMap, onChange) {
+        container.innerHTML = "";
+        options.forEach(function (opt) {
+          var chip = el("button", { type: "button", class: "chip" + (selectedMap[opt.id] ? " selected" : ""), text: opt.label });
+          chip.addEventListener("click", function () {
+            selectedMap[opt.id] = !selectedMap[opt.id];
+            chip.classList.toggle("selected", !!selectedMap[opt.id]);
+            onChange();
+          });
+          container.appendChild(chip);
+        });
+      }
+
+      function setHistView(name) {
+        historicoState.view = name;
+        document.querySelectorAll("#hist-view-switch .subtab").forEach(function (b) {
+          b.classList.toggle("active", b.dataset.hview === name);
+        });
+        ["lista", "tabela", "graficos"].forEach(function (v) {
+          document.getElementById("hist-view-" + v).style.display = (v === name) ? "block" : "none";
+        });
+      }
+
+      function loadLogs() {
+        apiGet("/api/logs?limit=100&since_id=" + lastLogId).then(function (entries) {
+          if (entries.length) {
+            logsAccum = logsAccum.concat(entries);
+            lastLogId = entries[entries.length - 1].id;
+          }
+          renderHistorico();
+        }).catch(function (err) { reportApiError(err, "Não foi possível carregar o histórico."); });
+      }
+
+      function historicoFiltered() {
+        var q = historicoState.search.trim().toLowerCase();
+        var protoKeys = Object.keys(historicoState.protocols).filter(function (k) { return historicoState.protocols[k]; });
+        var statusKeys = Object.keys(historicoState.statuses).filter(function (k) { return historicoState.statuses[k]; });
+        return logsAccum.filter(function (entry) {
+          if (protoKeys.length) {
+            var eProtos = entryProtocols(entry);
+            if (!eProtos.some(function (p) { return protoKeys.indexOf(p) !== -1; })) return false;
+          }
+          if (statusKeys.length && statusKeys.indexOf(classifyEntry(entry)) === -1) return false;
+          if (q) {
+            var hay = [entryLabel(entry), entry.source_protocol || "", entry.message || "", Object.keys(entry.targets || {}).join(" ")]
+              .join(" ").toLowerCase();
+            if (hay.indexOf(q) === -1) return false;
+          }
+          return true;
+        });
+      }
+
+      function historicoSort(list) {
+        var arr = list.slice();
+        var s = historicoState.sort;
+        arr.sort(function (a, b) {
+          if (s === "time_asc") return a.logged_at - b.logged_at || a.id - b.id;
+          if (s === "point_asc") return entryLabel(a).localeCompare(entryLabel(b));
+          if (s === "point_desc") return entryLabel(b).localeCompare(entryLabel(a));
+          if (s === "protocol_asc") return (a.source_protocol || "").localeCompare(b.source_protocol || "");
+          if (s === "losses_desc") return entryLossCount(b) - entryLossCount(a) || b.logged_at - a.logged_at;
+          return b.logged_at - a.logged_at || b.id - a.id; // time_desc (default)
+        });
+        return arr;
+      }
+
+      function historicoGroup(list) {
+        var g = historicoState.group;
+        if (g === "none") return [{ key: "all", label: null, items: list }];
+        var map = {}, order = [];
+        list.forEach(function (entry) {
+          var key, label;
+          if (g === "point") { key = entry.kind === "convert" ? entry.point_id : "(sistema)"; label = key; }
+          else if (g === "protocol") { key = entry.source_protocol || "sistema"; label = PROTO_LABEL[key] || "Sistema"; }
+          else if (g === "status") { key = classifyEntry(entry); label = STATUS_META[key].label; }
+          else { key = entry.kind; label = KIND_LABEL[key] || key; }
+          if (!map[key]) { map[key] = { key: key, label: label, items: [] }; order.push(key); }
+          map[key].items.push(entry);
+        });
+        return order.map(function (k) { return map[k]; });
+      }
+
+      function buildLogItem(entry) {
+        var item = el("div", { class: "log-item kind-" + entry.kind });
+        var isConvert = entry.kind === "convert";
+        var head = el("div", { class: "log-head" }, [
+          el("span", { class: "dot " + (entry.kind === "error" ? "bad" : (entry.failure ? "warn" : (isConvert && entryLossCount(entry) ? "warn" : "good"))) }),
+          el("span", { class: "pid", text: entryLabel(entry) }),
+          el("span", { class: "ts", text: fmtTime(entry.logged_at) })
+        ]);
+        if (isConvert) {
+          head.appendChild(statusPill(classifyEntry(entry)));
+          head.appendChild(el("span", { class: "hint-line", text: "#" + entry.id + " · " + entry.source_protocol + " →" }));
+          head.addEventListener("click", function () {
+            openLogIds[entry.id] = !openLogIds[entry.id];
+            renderHistorico();
+          });
+        }
+        item.appendChild(head);
+        if (isConvert) {
+          var body = el("div", { class: "log-body" + (openLogIds[entry.id] ? " open" : "") });
+          if (openLogIds[entry.id]) body.appendChild(renderReport(entry));
+          item.appendChild(body);
+        }
+        return item;
+      }
+
+      function renderHistLista(groups, total) {
+        var wrap = document.getElementById("hist-view-lista");
+        wrap.innerHTML = "";
+        if (!total) {
+          wrap.appendChild(el("div", { class: "empty-state", text: logsAccum.length ? "Nenhum evento corresponde aos filtros atuais." : "Nenhum evento ainda. Rode a demonstração no Painel ou faça uma conversão." }));
+          return;
+        }
+        groups.forEach(function (g) {
+          if (g.label !== null) {
+            wrap.appendChild(el("div", { class: "group-header" }, [
+              el("span", { text: g.label }), el("span", { class: "gcount", text: g.items.length + " evento(s)" })
+            ]));
+          }
+          g.items.forEach(function (entry) { wrap.appendChild(buildLogItem(entry)); });
+        });
+      }
+
+      function sortableTh(label, sortKey) {
+        var isSorted = historicoState.sort === sortKey;
+        var node = el("th", { class: "sortable" + (isSorted ? " sorted" : "") }, [
+          document.createTextNode(label),
+          el("span", { class: "arrow", text: isSorted ? (historicoState.sort.indexOf("desc") !== -1 ? "↓" : "↑") : "↕" })
+        ]);
+        node.addEventListener("click", function () {
+          historicoState.sort = sortKey;
+          document.getElementById("hist-sort").value = sortKey;
+          renderHistorico();
+        });
+        return node;
+      }
+
+      function renderHistTabela(groups, total) {
+        var wrap = document.getElementById("hist-view-tabela");
+        wrap.innerHTML = "";
+        if (!total) {
+          wrap.appendChild(el("div", { class: "empty-state", text: logsAccum.length ? "Nenhum evento corresponde aos filtros atuais." : "Nenhum evento ainda." }));
+          return;
+        }
+        groups.forEach(function (g) {
+          if (g.label !== null) {
+            wrap.appendChild(el("div", { class: "group-header" }, [
+              el("span", { text: g.label }), el("span", { class: "gcount", text: g.items.length + " evento(s)" })
+            ]));
+          }
+          var table = el("table", { class: "data" });
+          table.appendChild(el("thead", {}, [el("tr", {}, [
+            el("th", { text: "#" }), sortableTh("Horário", "time_desc"), el("th", { text: "Tipo" }),
+            sortableTh("Ponto / mensagem", "point_asc"), sortableTh("Origem", "protocol_asc"),
+            el("th", { text: "Destinos" }), el("th", { text: "Status" }), sortableTh("Perdas", "losses_desc")
+          ])]));
+          var tbody = el("tbody");
+          g.items.forEach(function (entry) {
+            var isConvert = entry.kind === "convert";
+            var tr = el("tr", { class: isConvert ? "clickable" : "" });
+            if (isConvert) {
+              tr.addEventListener("click", function () {
+                openLogIds[entry.id] = true;
+                setHistView("lista");
+                renderHistorico();
+              });
+            }
+            var targetsCell = el("td");
+            Object.keys(entry.targets || {}).forEach(function (p) { targetsCell.appendChild(protocolBadge(p)); targetsCell.appendChild(document.createTextNode(" ")); });
+            tr.appendChild(el("td", { class: "mono", text: "#" + entry.id }));
+            tr.appendChild(el("td", { class: "mono", text: fmtTime(entry.logged_at) }));
+            tr.appendChild(el("td", { text: KIND_LABEL[entry.kind] || entry.kind }));
+            tr.appendChild(el("td", { class: "mono", text: entryLabel(entry) }));
+            tr.appendChild(el("td", {}, entry.source_protocol ? [protocolBadge(entry.source_protocol)] : [document.createTextNode("—")]));
+            tr.appendChild(targetsCell.childNodes.length ? targetsCell : el("td", { text: "—" }));
+            tr.appendChild(el("td", {}, [statusPill(classifyEntry(entry))]));
+            tr.appendChild(el("td", { class: "mono", text: String(entryLossCount(entry)) }));
+            tbody.appendChild(tr);
+          });
+          table.appendChild(tbody);
+          wrap.appendChild(table);
+        });
+      }
+
+      function renderHistGraficos(list) {
+        var wrap = document.getElementById("hist-view-graficos");
+        wrap.innerHTML = "";
+        if (!list.length) {
+          wrap.appendChild(el("div", { class: "empty-state", text: logsAccum.length ? "Nenhum evento corresponde aos filtros atuais." : "Nenhum evento ainda." }));
+          return;
+        }
+        var grid = el("div", { class: "grid cols-2" });
+
+        var byProto = {};
+        list.forEach(function (e) { if (e.source_protocol) byProto[e.source_protocol] = (byProto[e.source_protocol] || 0) + 1; });
+        var protoData = PROTOCOLS.filter(function (p) { return byProto[p.id]; })
+          .map(function (p) { return { label: p.label, value: byProto[p.id], color: PROTO_COLOR[p.id] }; });
+        grid.appendChild(chartBox("Conversões por protocolo de origem", protoData));
+
+        var byStatus = {};
+        list.forEach(function (e) { var s = classifyEntry(e); byStatus[s] = (byStatus[s] || 0) + 1; });
+        var statusData = Object.keys(STATUS_META).filter(function (k) { return byStatus[k]; })
+          .map(function (k) { return { label: STATUS_META[k].label, value: byStatus[k], color: STATUS_META[k].color }; });
+        grid.appendChild(chartBox("Eventos por status", statusData));
+
+        var byKind = {};
+        list.forEach(function (e) { byKind[e.kind] = (byKind[e.kind] || 0) + 1; });
+        var kindData = Object.keys(byKind).map(function (k) { return { label: KIND_LABEL[k] || k, value: byKind[k], color: "var(--accent)" }; });
+        grid.appendChild(chartBox("Eventos por tipo", kindData));
+
+        var bySeverity = {};
+        list.forEach(function (e) {
+          Object.keys(e.targets || {}).forEach(function (p) {
+            var t = e.targets[p];
+            (t && t.losses ? t.losses : []).forEach(function (l) { bySeverity[l.severity] = (bySeverity[l.severity] || 0) + 1; });
+          });
+        });
+        var sevColor = { error: "var(--bad)", warning: "var(--warn)", info: "var(--info)" };
+        var sevData = Object.keys(bySeverity).map(function (k) { return { label: k, value: bySeverity[k], color: sevColor[k] || "var(--accent)" }; });
+        grid.appendChild(chartBox("Perdas de metadados por severidade", sevData));
+
+        var byPoint = {};
+        list.forEach(function (e) { if (e.kind === "convert") byPoint[e.point_id] = (byPoint[e.point_id] || 0) + 1; });
+        var pointData = Object.keys(byPoint).map(function (k) { return { label: k, value: byPoint[k], color: "var(--accent)" }; })
+          .sort(function (a, b) { return b.value - a.value; }).slice(0, 8);
+        grid.appendChild(chartBox("Pontos mais convertidos", pointData));
+
+        var sortedByTime = list.slice().sort(function (a, b) { return a.logged_at - b.logged_at; });
+        var bucketOrder = [], bucketMap = {};
+        sortedByTime.forEach(function (e) {
+          var d = new Date(e.logged_at * 1000);
+          var key = String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
+          if (!bucketMap[key]) { bucketMap[key] = 0; bucketOrder.push(key); }
+          bucketMap[key] += 1;
+        });
+        var timelineData = bucketOrder.slice(-10).map(function (k) { return { label: k, value: bucketMap[k], color: "var(--accent)" }; });
+        grid.appendChild(chartBox("Volume de eventos por minuto (janela recente)", timelineData));
+
+        wrap.appendChild(grid);
+      }
+
+      function renderHistorico() {
+        var filtered = historicoFiltered();
+        var countEl = document.getElementById("hist-filter-count");
+        if (countEl) countEl.textContent = "(" + filtered.length + " de " + logsAccum.length + ")";
+        var sorted = historicoSort(filtered);
+        var groups = historicoGroup(sorted);
+        renderHistLista(groups, sorted.length);
+        renderHistTabela(groups, sorted.length);
+        renderHistGraficos(sorted);
+      }
+
+      document.getElementById("btn-refresh-logs").addEventListener("click", function () {
+        lastLogId = 0; logsAccum = []; loadLogs();
+      });
+
+      document.getElementById("btn-clear-logs").addEventListener("click", function () {
+        if (!confirm("Limpar todo o histórico de eventos?")) return;
+        apiDelete("/api/logs").then(function () {
+          logsAccum = []; lastLogId = 0; openLogIds = {};
+          renderHistorico();
+          toast("Histórico limpo.", "success");
+        }).catch(function (err) { reportApiError(err, "Falha ao limpar histórico."); });
+      });
+
+      /* ============ help modal ============ */
+      var helpBackdrop = document.getElementById("help-backdrop");
+      document.getElementById("btn-help").addEventListener("click", function () { helpBackdrop.classList.add("open"); });
+      document.getElementById("btn-help-close").addEventListener("click", function () { helpBackdrop.classList.remove("open"); });
+      helpBackdrop.addEventListener("click", function (ev) { if (ev.target === helpBackdrop) helpBackdrop.classList.remove("open"); });
+      document.addEventListener("keydown", function (ev) { if (ev.key === "Escape") helpBackdrop.classList.remove("open"); });
+
+      /* ============ boot ============ */
+      var startView = (location.hash || "").replace("#", "");
+      if (["painel", "conversor", "mapeamentos", "historico"].indexOf(startView) === -1) startView = "painel";
+      showView(startView);
+
+    })();
+  </script>
 </body>
+
 </html>
