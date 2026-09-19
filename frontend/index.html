@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gateway semântico multiprotocolo</title>
+<style>
+  :root {
+    --bg: #0b0f14;
+    --panel: #121821;
+    --panel-alt: #0e141b;
+    --border: #22303c;
+    --border-soft: #1a2530;
+    --text: #e5ecf1;
+    --text-dim: #8b9aa8;
+    --text-faint: #55636f;
+    --accent: #4fa8e0;
+    --accent-dim: #2c5b78;
+    --good: #3ecf6e;
+    --bad: #f2564b;
+    --warn: #e8b339;
+    --mono: ui-monospace, "SF Mono", "Cascadia Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+    background: var(--panel-alt);
+    flex-wrap: wrap;
+  }
+
+  .brand {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+
+  .brand .mark {
+    width: 9px;
+    height: 9px;
+    background: var(--accent);
+    display: inline-block;
+    flex-shrink: 0;
+  }
+
+  header h1 {
+    font-size: 15px;
+    font-weight: 600;
+    margin: 0;
+    letter-spacing: 0.2px;
+  }
+
+  header .sub {
+    color: var(--text-faint);
+    font-size: 12.5px;
+  }
+
+  .adapters {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .adapter-pill {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 5px 10px;
+    border: 1px solid var(--border);
+    background: var(--panel);
+    cursor: pointer;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text-dim);
+    user-select: none;
+    transition: border-color 0.15s;
+  }
+
+  .adapter-pill:hover { border-color: var(--accent-dim); }
+
+  .adapter-pill .dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--text-faint);
+    flex-shrink: 0;
+  }
+
+  .adapter-pill.on .dot { background: var(--good); box-shadow: 0 0 5px var(--good); }
+  .adapter-pill.off .dot { background: var(--bad); }
+  .adapter-pill.on { color: var(--text); }
+
+  main {
+    display: grid;
+    grid-template-columns: 230px 1fr 300px;
+    gap: 1px;
+    background: var(--border);
+    min-height: calc(100vh - 57px);
+  }
+
+  section.col {
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .col-head {
+    padding: 12px 16px 10px;
+    border-bottom: 1px solid var(--border-soft);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .col-head h2 {
+    font-size: 12px;
+    font-weight: 600;
+    margin: 0;
+    color: var(--text-dim);
+    letter-spacing: 0.3px;
+  }
+
+  .col-body {
+    padding: 12px 16px;
+    overflow-y: auto;
+    flex: 1;
+  }
+
+  button.ghost {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    font-family: var(--sans);
+    font-size: 11.5px;
+    padding: 3px 8px;
+    cursor: pointer;
+  }
+  button.ghost:hover { border-color: var(--accent-dim); color: var(--text); }
+
+  /* --- points list --- */
+  .point-item {
+    padding: 9px 10px;
+    border: 1px solid var(--border-soft);
+    margin-bottom: 6px;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .point-item:hover { border-color: var(--accent-dim); }
+  .point-item.selected { border-color: var(--accent); background: rgba(79,168,224,0.06); }
+
+  .point-item .pid {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    color: var(--text);
+    word-break: break-all;
+  }
+
+  .point-item .protos {
+    margin-top: 5px;
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+  }
+
+  .tag {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+    padding: 1px 5px;
+  }
+
+  .valid-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    display: inline-block; margin-right: 6px;
+    background: var(--text-faint);
+  }
+  .valid-dot.ok { background: var(--good); }
+  .valid-dot.err { background: var(--bad); }
+
+  .empty {
+    color: var(--text-faint);
+    font-size: 12.5px;
+    padding: 20px 0;
+    text-align: center;
+  }
+
+  /* --- workbench --- */
+  .field { margin-bottom: 14px; }
+  .field label {
+    display: block;
+    font-size: 11.5px;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+  }
+
+  select, input[type=text] {
+    width: 100%;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+    padding: 7px 8px;
+  }
+  select:focus, input:focus { outline: 1px solid var(--accent); border-color: var(--accent); }
+
+  .check-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .check-chip {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid var(--border);
+    padding: 6px 10px;
+    cursor: pointer;
+    font-family: var(--mono);
+    font-size: 12.5px;
+    color: var(--text-dim);
+  }
+  .check-chip input { accent-color: var(--accent); }
+  .check-chip.checked { border-color: var(--accent); color: var(--text); }
+
+  .btn-row { display: flex; gap: 10px; margin-top: 16px; }
+
+  button.primary {
+    background: var(--accent);
+    color: #06121a;
+    border: none;
+    font-family: var(--sans);
+    font-weight: 600;
+    font-size: 13px;
+    padding: 9px 18px;
+    cursor: pointer;
+  }
+  button.primary:hover { background: #66b6e6; }
+  button.primary:disabled { background: var(--border); color: var(--text-faint); cursor: not-allowed; }
+
+  button.secondary {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    font-family: var(--sans);
+    font-size: 13px;
+    padding: 9px 16px;
+    cursor: pointer;
+  }
+  button.secondary:hover { border-color: var(--accent-dim); color: var(--text); }
+
+  .hint { color: var(--text-faint); font-size: 12px; margin-top: -6px; margin-bottom: 14px; }
+
+  /* --- result --- */
+  .result { margin-top: 22px; border-top: 1px solid var(--border-soft); padding-top: 18px; }
+  .result-title { font-size: 12px; color: var(--text-dim); margin-bottom: 10px; letter-spacing: 0.3px; }
+
+  .canon-card {
+    border: 1px solid var(--border);
+    padding: 12px 14px;
+    margin-bottom: 14px;
+    font-family: var(--mono);
+    font-size: 12.5px;
+  }
+  .canon-card .row { display: flex; justify-content: space-between; padding: 3px 0; gap: 12px; }
+  .canon-card .row .k { color: var(--text-faint); }
+  .canon-card .row .v { color: var(--text); text-align: right; }
+
+  .validity-tag {
+    padding: 1px 7px;
+    border: 1px solid currentColor;
+    font-size: 10.5px;
+  }
+  .validity-good { color: var(--good); }
+  .validity-invalid { color: var(--bad); }
+  .validity-questionable { color: var(--warn); }
+
+  .failure-banner {
+    border: 1px solid var(--bad);
+    color: var(--bad);
+    padding: 8px 12px;
+    font-size: 12.5px;
+    margin-bottom: 14px;
+    font-family: var(--mono);
+  }
+
+  .targets-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    gap: 10px;
+  }
+
+  .target-card {
+    border: 1px solid var(--border);
+    padding: 10px 12px;
+  }
+  .target-card.has-error { border-color: var(--bad); }
+  .target-card .proto-name {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--accent);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+  }
+  .target-card .addr { font-family: var(--mono); font-size: 11.5px; color: var(--text-faint); }
+  .target-card .written { font-family: var(--mono); font-size: 13px; margin: 4px 0 6px; word-break: break-word; }
+  .target-card .loss {
+    font-size: 11px;
+    color: var(--warn);
+    padding-left: 10px;
+    border-left: 2px solid var(--warn);
+    margin-top: 5px;
+  }
+  .target-card .err-text { color: var(--bad); font-size: 12px; }
+  .target-card .no-loss { font-size: 11px; color: var(--text-faint); }
+
+  /* --- log --- */
+  .log-entry {
+    padding: 7px 0;
+    border-bottom: 1px solid var(--border-soft);
+    font-size: 11.5px;
+  }
+  .log-entry .meta {
+    display: flex;
+    justify-content: space-between;
+    color: var(--text-faint);
+    font-family: var(--mono);
+    font-size: 10.5px;
+    margin-bottom: 3px;
+  }
+  .log-entry .kind-tag {
+    padding: 0 5px;
+    border-left: 2px solid var(--text-faint);
+  }
+  .log-entry.convert .kind-tag { border-color: var(--accent); color: var(--accent); }
+  .log-entry.error .kind-tag { border-color: var(--bad); color: var(--bad); }
+  .log-entry.info .kind-tag { border-color: var(--text-dim); }
+  .log-entry .msg { color: var(--text-dim); font-family: var(--mono); word-break: break-word; }
+
+  ::-webkit-scrollbar { width: 9px; height: 9px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); }
+  ::-webkit-scrollbar-thumb:hover { background: var(--accent-dim); }
+
+  @media (max-width: 880px) {
+    main { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <span class="mark"></span>
+    <div>
+      <h1>Gateway semântico multiprotocolo</h1>
+      <div class="sub">IEC 61850 MMS · DNP3 · Modbus · OPC UA</div>
+    </div>
+  </div>
+  <div class="adapters" id="adapters"></div>
+</header>
+
+<main>
+  <section class="col">
+    <div class="col-head">
+      <h2>Pontos mapeados</h2>
+      <button class="ghost" id="btn-refresh-points" title="Revalidar">↻</button>
+    </div>
+    <div class="col-body" id="points-list">
+      <div class="empty">Carregando…</div>
+    </div>
+  </section>
+
+  <section class="col">
+    <div class="col-head">
+      <h2>Conversão</h2>
+      <button class="ghost" id="btn-demo">Rodar demo</button>
+    </div>
+    <div class="col-body">
+      <div class="field">
+        <label>Ponto</label>
+        <select id="sel-point"><option value="">Selecione um ponto à esquerda…</option></select>
+      </div>
+
+      <div class="field">
+        <label>Protocolo de origem</label>
+        <select id="sel-source"><option value="">—</option></select>
+      </div>
+
+      <div class="field">
+        <label>Protocolos de destino</label>
+        <div class="check-row" id="target-checks"></div>
+      </div>
+
+      <div class="btn-row">
+        <button class="primary" id="btn-convert" disabled>Converter</button>
+        <button class="secondary" id="btn-clear-result">Limpar</button>
+      </div>
+      <div class="hint" id="wb-hint"></div>
+
+      <div class="result" id="result" style="display:none;">
+        <div class="result-title">Resultado</div>
+        <div id="failure-banner"></div>
+        <div class="canon-card" id="canon-card"></div>
+        <div class="targets-grid" id="targets-grid"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="col">
+    <div class="col-head">
+      <h2>Eventos</h2>
+      <button class="ghost" id="btn-clear-log">Limpar</button>
+    </div>
+    <div class="col-body" id="log-list">
+      <div class="empty">Sem eventos ainda.</div>
+    </div>
+  </section>
+</main>
+
+<script>
+const API = "/api";
+let mappingsCache = [];
+let currentBindings = {};
+let lastLogId = 0;
+
+async function jget(url) {
+  const r = await fetch(url);
+  if (!r.ok) throw new Error((await r.json()).detail || r.statusText);
+  return r.json();
+}
+async function jpost(url, body) {
+  const r = await fetch(url, {
+    method: "POST",
+    headers: body !== undefined ? { "Content-Type": "application/json" } : {},
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.detail || r.statusText);
+  return data;
+}
+async function jdelete(url) {
+  const r = await fetch(url, { method: "DELETE" });
+  if (!r.ok) throw new Error((await r.json()).detail || r.statusText);
+  return r.json();
+}
+
+// ---------------------------------------------------------------- adapters
+async function loadAdapters() {
+  const data = await jget(`${API}/adapters`);
+  const el = document.getElementById("adapters");
+  el.innerHTML = "";
+  Object.entries(data).forEach(([name, info]) => {
+    const pill = document.createElement("div");
+    pill.className = `adapter-pill ${info.connected ? "on" : "off"}`;
+    pill.innerHTML = `<span class="dot"></span>${name}`;
+    pill.title = info.connected ? "Conectado — clique para simular queda" : "Desconectado — clique para reconectar";
+    pill.onclick = async () => {
+      await jpost(`${API}/adapters/${name}/connection`, { connected: !info.connected });
+      loadAdapters();
+      pollLogs();
+    };
+    el.appendChild(pill);
+  });
+}
+
+// ----------------------------------------------------------------- points
+async function loadMappings() {
+  const list = await jget(`${API}/mappings`);
+  mappingsCache = list;
+  let validationMap = {};
+  try {
+    validationMap = await jpost(`${API}/mappings/validate`);
+  } catch (e) { /* ignore */ }
+
+  const el = document.getElementById("points-list");
+  if (list.length === 0) {
+    el.innerHTML = '<div class="empty">Nenhum ponto cadastrado.</div>';
+    return;
+  }
+  el.innerHTML = "";
+  list.forEach((m) => {
+    const item = document.createElement("div");
+    item.className = "point-item";
+    item.dataset.pid = m.point_id;
+    const err = validationMap[m.point_id];
+    const dotClass = err === undefined ? "" : (err === null ? "ok" : "err");
+    item.innerHTML = `
+      <div class="pid"><span class="valid-dot ${dotClass}"></span>${m.point_id}</div>
+      <div class="protos">${m.protocols.map(p => `<span class="tag">${p}</span>`).join("")}</div>
+    `;
+    if (err) item.title = err;
+    item.onclick = () => selectPoint(m.point_id);
+    el.appendChild(item);
+  });
+
+  const sel = document.getElementById("sel-point");
+  const currentVal = sel.value;
+  sel.innerHTML = '<option value="">Selecione um ponto…</option>' +
+    list.map(m => `<option value="${m.point_id}">${m.point_id}</option>`).join("");
+  if (currentVal) sel.value = currentVal;
+}
+
+async function selectPoint(pid) {
+  document.querySelectorAll(".point-item").forEach(el => {
+    el.classList.toggle("selected", el.dataset.pid === pid);
+  });
+  document.getElementById("sel-point").value = pid;
+  const mapping = await jget(`${API}/mappings/${encodeURIComponent(pid)}`);
+  currentBindings = mapping.bindings;
+  populateProtocolControls();
+}
+
+function populateProtocolControls() {
+  const protos = Object.keys(currentBindings);
+  const selSource = document.getElementById("sel-source");
+  selSource.innerHTML = protos.map(p => `<option value="${p}">${p}</option>`).join("") ||
+    '<option value="">—</option>';
+
+  const targetsEl = document.getElementById("target-checks");
+  targetsEl.innerHTML = "";
+  protos.forEach((p, i) => {
+    const chip = document.createElement("label");
+    chip.className = "check-chip";
+    chip.innerHTML = `<input type="checkbox" value="${p}" ${i !== 0 ? "" : ""}> ${p}`;
+    const input = chip.querySelector("input");
+    input.onchange = () => chip.classList.toggle("checked", input.checked);
+    targetsEl.appendChild(chip);
+  });
+  document.getElementById("btn-convert").disabled = protos.length === 0;
+  document.getElementById("wb-hint").textContent = protos.length
+    ? `${protos.length} protocolo(s) disponível(is) para este ponto`
+    : "";
+}
+
+document.getElementById("sel-point").addEventListener("change", (e) => {
+  if (e.target.value) selectPoint(e.target.value);
+});
+
+document.getElementById("btn-refresh-points").addEventListener("click", loadMappings);
+
+// -------------------------------------------------------------- convert
+document.getElementById("btn-convert").addEventListener("click", async () => {
+  const pid = document.getElementById("sel-point").value;
+  const source = document.getElementById("sel-source").value;
+  const targets = Array.from(document.querySelectorAll("#target-checks input:checked")).map(i => i.value);
+
+  if (!pid || !source) {
+    document.getElementById("wb-hint").textContent = "Selecione um ponto e um protocolo de origem.";
+    return;
+  }
+  if (targets.length === 0) {
+    document.getElementById("wb-hint").textContent = "Selecione ao menos um protocolo de destino.";
+    return;
+  }
+  document.getElementById("wb-hint").textContent = "";
+
+  try {
+    const report = await jpost(`${API}/convert`, { point_id: pid, source, targets });
+    renderResult(report);
+    pollLogs();
+  } catch (e) {
+    document.getElementById("wb-hint").textContent = `Erro: ${e.message}`;
+  }
+});
+
+document.getElementById("btn-clear-result").addEventListener("click", () => {
+  document.getElementById("result").style.display = "none";
+});
+
+function renderResult(report) {
+  document.getElementById("result").style.display = "block";
+
+  const banner = document.getElementById("failure-banner");
+  banner.innerHTML = report.failure
+    ? `<div class="failure-banner">Falha na leitura: ${report.failure}</div>`
+    : "";
+
+  const c = report.canonical;
+  const canonEl = document.getElementById("canon-card");
+  if (c) {
+    const vClass = `validity-${c.quality.validity}`;
+    canonEl.innerHTML = `
+      <div class="row"><span class="k">valor</span><span class="v">${c.value}</span></div>
+      <div class="row"><span class="k">tipo</span><span class="v">${c.data_type}</span></div>
+      <div class="row"><span class="k">unidade</span><span class="v">${c.unit || "—"}</span></div>
+      <div class="row"><span class="k">qualidade</span><span class="v"><span class="validity-tag ${vClass}">${c.quality.validity}${c.quality.flags.length ? " · " + c.quality.flags.join(",") : ""}</span></span></div>
+      <div class="row"><span class="k">timestamp</span><span class="v">${c.timestamp.value_utc} (${c.timestamp.sync_source})</span></div>
+      <div class="row"><span class="k">origem</span><span class="v">${c.source_protocol}</span></div>
+    `;
+  } else {
+    canonEl.innerHTML = '<div class="empty">Sem dado canônico.</div>';
+  }
+
+  const grid = document.getElementById("targets-grid");
+  grid.innerHTML = "";
+  Object.entries(report.targets).forEach(([proto, result]) => {
+    const card = document.createElement("div");
+    card.className = "target-card" + (result.error ? " has-error" : "");
+    if (result.error) {
+      card.innerHTML = `<div class="proto-name">${proto}</div><div class="err-text">${result.error}</div>`;
+    } else {
+      const losses = (result.losses || []).map(l => `<div class="loss">${l}</div>`).join("")
+        || '<div class="no-loss">sem perda de metadados</div>';
+      card.innerHTML = `
+        <div class="proto-name">${proto}</div>
+        <div class="addr">${result.address}</div>
+        <div class="written">${result.written_value}</div>
+        ${losses}
+      `;
+    }
+    grid.appendChild(card);
+  });
+}
+
+// ----------------------------------------------------------------- demo
+document.getElementById("btn-demo").addEventListener("click", async () => {
+  const btn = document.getElementById("btn-demo");
+  btn.disabled = true;
+  btn.textContent = "Rodando…";
+  try {
+    await jpost(`${API}/demo`);
+    await loadMappings();
+    await loadAdapters();
+    await pollLogs();
+  } catch (e) {
+    alert(`Erro ao rodar demo: ${e.message}`);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Rodar demo";
+  }
+});
+
+// ------------------------------------------------------------------ log
+function summarizeEntry(e) {
+  if (e.kind === "convert") {
+    const targets = Object.keys(e.targets || {}).join(", ");
+    return `${e.point_id} (${e.source_protocol}) → ${targets}${e.failure ? "  [FALHA]" : ""}`;
+  }
+  return e.message || "";
+}
+
+function appendLogEntries(entries) {
+  if (entries.length === 0) return;
+  const el = document.getElementById("log-list");
+  if (el.querySelector(".empty")) el.innerHTML = "";
+  entries.forEach((e) => {
+    const div = document.createElement("div");
+    div.className = `log-entry ${e.kind}`;
+    const time = new Date(e.logged_at * 1000).toLocaleTimeString("pt-BR");
+    div.innerHTML = `
+      <div class="meta"><span class="kind-tag">${e.kind}</span><span>${time}</span></div>
+      <div class="msg">${summarizeEntry(e)}</div>
+    `;
+    el.appendChild(div);
+    lastLogId = Math.max(lastLogId, e.id);
+  });
+  el.scrollTop = el.scrollHeight;
+}
+
+async function pollLogs() {
+  try {
+    const entries = await jget(`${API}/logs?since_id=${lastLogId}&limit=100`);
+    appendLogEntries(entries);
+  } catch (e) { /* silencioso */ }
+}
+
+document.getElementById("btn-clear-log").addEventListener("click", async () => {
+  await jdelete(`${API}/logs`);
+  lastLogId = 0;
+  document.getElementById("log-list").innerHTML = '<div class="empty">Sem eventos ainda.</div>';
+});
+
+// ----------------------------------------------------------------- init
+(async function init() {
+  await Promise.all([loadAdapters(), loadMappings(), pollLogs()]);
+  setInterval(pollLogs, 4000);
+})();
+</script>
+</body>
+</html>

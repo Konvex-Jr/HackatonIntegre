@@ -1,0 +1,48 @@
+{
+  "SE01.MMXU1.PhV.phsA": {
+    "point_id": "SE01.MMXU1.PhV.phsA",
+    "bindings": {
+      "mms": {
+        "protocol": "mms",
+        "address": "SE01/MMXU1.PhV.phsA[MX]",
+        "data_type": "float",
+        "unit": "kV",
+        "scale": 1.0,
+        "offset": 0.0,
+        "raw_value": 13.8
+      },
+      "modbus": {
+        "protocol": "modbus",
+        "address": "40001",
+        "data_type": "int",
+        "unit": "kV",
+        "scale": 0.1,
+        "offset": 0.0,
+        "raw_value": null
+      }
+    }
+  },
+  "FDR02.AI12": {
+    "point_id": "FDR02.AI12",
+    "bindings": {
+      "dnp3": {
+        "protocol": "dnp3",
+        "address": "AI:12",
+        "data_type": "float",
+        "unit": "A",
+        "scale": 0.1,
+        "offset": 0.0,
+        "raw_value": 5023
+      },
+      "opcua": {
+        "protocol": "opcua",
+        "address": "ns=2;s=FDR02.AI12",
+        "data_type": "float",
+        "unit": "A",
+        "scale": 1.0,
+        "offset": 0.0,
+        "raw_value": null
+      }
+    }
+  }
+}

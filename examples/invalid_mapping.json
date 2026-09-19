@@ -1,0 +1,25 @@
+{
+  "BAD.MANUAL": {
+    "point_id": "BAD.MANUAL",
+    "bindings": {
+      "modbus": {
+        "protocol": "modbus",
+        "address": "40010",
+        "data_type": "bool",
+        "unit": "V",
+        "scale": 1.0,
+        "offset": 0.0,
+        "raw_value": true
+      },
+      "opcua": {
+        "protocol": "opcua",
+        "address": "ns=2;s=Bad",
+        "data_type": "float",
+        "unit": "A",
+        "scale": 1.0,
+        "offset": 0.0,
+        "raw_value": 1.0
+      }
+    }
+  }
+}
