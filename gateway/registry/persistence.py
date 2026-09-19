@@ -9,7 +9,13 @@ from .mapping import PointMapping
 def save_mappings(path: Union[str, Path], mappings: Dict[str, PointMapping]) -> None:
     data = {point_id: mapping.to_dict() for point_id, mapping in mappings.items()}
     with open(path, "w", encoding="utf-8") as handle:
-        json.dump(data, handle, indent=2, ensure_ascii=False)
+        json.dump(data, handle, indent=2, ensure_ascii=False, default=_json_default)
+
+
+def _json_default(value):
+    if hasattr(value, "isoformat"):
+        return value.isoformat()
+    raise TypeError(f"tipo não serializável: {type(value).__name__}")
 
 
 def load_mappings(path: Union[str, Path]) -> Dict[str, PointMapping]:

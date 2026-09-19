@@ -55,6 +55,8 @@ def canonical_to_dict(canonical: Optional[CanonicalPoint]) -> Optional[Dict[str,
         "timestamp": canonical.timestamp.as_dict(),
         "source_protocol": canonical.source_protocol,
         "source_raw": canonical.source_raw,
+        "source_address": canonical.source_address,
+        "source_metadata": canonical.source_metadata,
     }
 
 
@@ -94,10 +96,14 @@ class BindingIn(BaseModel):
     scale: float = 1.0
     offset: float = 0.0
     raw_value: Optional[Any] = None
+    raw_timestamp: Optional[str] = None
     native_validity: Optional[str] = None
     native_quality_flags: List[str] = []
     min_engineering: Optional[float] = None
     max_engineering: Optional[float] = None
+    encoding: Optional[str] = None
+    byte_order: Optional[str] = None
+    protocol_metadata: Dict[str, Any] = {}
 
 
 class MappingIn(BaseModel):
@@ -212,8 +218,8 @@ def run_demo():
     bad = PointMapping(
         point_id="BAD.POINT",
         bindings={
-            "dnp3": ProtocolBinding(protocol="dnp3", address="BI99", data_type="bool", unit="", raw_value=True),
-            "opcua": ProtocolBinding(protocol="opcua", address="ns=2;s=Bad", data_type="float", unit="V", raw_value=1.0),
+            "dnp3": ProtocolBinding(protocol="dnp3", address="BI99", data_type="bool", unit="", raw_value=True, protocol_metadata={"group": 1, "variation": 1, "index": 99}),
+            "opcua": ProtocolBinding(protocol="opcua", address="ns=2;s=Bad", data_type="float", unit="V", raw_value=1.0, protocol_metadata={"namespace": 2, "identifier_type": "s"}),
         },
     )
     try:

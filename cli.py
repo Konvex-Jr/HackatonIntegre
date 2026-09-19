@@ -1,16 +1,3 @@
-#!/usr/bin/env python3
-"""Interface de linha de comando do gateway semântico multiprotocolo.
-
-Comandos:
-  map list                          Lista pontos cadastrados
-  map show <id>                     Mostra os bindings de um ponto
-  map validate [<id>]               Valida um ponto (ou todos) do mapeamento
-  map add <arquivo.json>            Cadastra pontos a partir de um arquivo JSON
-  convert <id> --from P --to P...   Converte um ponto entre protocolos
-  fail <id> --protocol P --to P...  Simula perda de comunicação e converte
-  demo                              Roda os 2 exemplos + o cenário de falha
-"""
-
 import argparse
 import json
 import sys
@@ -33,6 +20,8 @@ def build_default_engine() -> GatewayEngine:
 def print_canonical(c):
     print(f"  canônico: valor={c.value}  tipo={c.data_type}  unidade='{c.unit}'")
     print(f"            qualidade={c.quality}  timestamp={c.timestamp}")
+    if c.source_address:
+        print(f"            endereço_origem={c.source_address}")
 
 
 def print_report(report: ConversionReport):
@@ -46,11 +35,17 @@ def print_report(report: ConversionReport):
             print(f"       erro: {result['error']}")
             continue
         print(f"       endereço={result['address']}  valor_escrito={result['written_value']}")
-        if result["losses"]:
+        if result.get("engineering_value") is not None:
+            print(f"       valor_engenharia={result['engineering_value']} {result.get('target_unit', '')}".rstrip())
+        if result.get("encoding"):
+            print(f"       codificação={result['encoding']}")
+        if "status_code" in result:
+            print(f"       status_code={result['status_code']}")
+        if result.get("losses"):
             for loss in result["losses"]:
                 print(f"       [perda] {loss}")
         else:
-            print("       (sem perda de metadados)")
+            print("       (sem perda de informação canônica)")
 
 
 def cmd_map_list(args):
@@ -72,7 +67,8 @@ def cmd_map_validate(args):
     registry.load(str(DEFAULT_MAPPINGS), validate=False)
     if args.point_id:
         try:
-            registry.validate_mapping(registry.get(args.point_id))
+            from gateway.registry.validation import validate_mapping
+            validate_mapping(registry.get(args.point_id))
             print(f"{args.point_id}: OK")
         except ValidationError as e:
             print(f"{args.point_id}: INVÁLIDO -> {e}")
@@ -124,13 +120,13 @@ def cmd_demo(args):
     engine = build_default_engine()
 
     print("=" * 70)
-    print("EXEMPLO 1: IEC 61850 MMS -> Modbus  (perda parcial de metadados)")
+    print("EXEMPLO 1: IEC 61850 MMS -> Modbus")
     print("=" * 70)
     print_report(engine.convert("SE01.MMXU1.PhV.phsA", "mms", ["modbus"]))
 
     print()
     print("=" * 70)
-    print("EXEMPLO 2: DNP3 -> OPC UA  (fidelidade total)")
+    print("EXEMPLO 2: DNP3 -> OPC UA")
     print("=" * 70)
     print_report(engine.convert("FDR02.AI12", "dnp3", ["opcua"]))
 
@@ -138,63 +134,78 @@ def cmd_demo(args):
     print("=" * 70)
     print("CENÁRIO DE FALHA: perda de comunicação com a origem MMS")
     print("=" * 70)
+    engine = build_default_engine()
+    engine.convert("SE01.MMXU1.PhV.phsA", "mms", ["modbus"])
     engine.adapters["mms"].connected = False
     print_report(engine.convert("SE01.MMXU1.PhV.phsA", "mms", ["modbus", "opcua"]))
-    engine.adapters["mms"].connected = True
 
     print()
     print("=" * 70)
     print("CENÁRIO DE CONFIGURAÇÃO INVÁLIDA: tipos incompatíveis")
     print("=" * 70)
+    registry = MappingRegistry()
+    registry.load(str(DEFAULT_MAPPINGS), validate=False)
     bad = PointMapping(
         point_id="BAD.POINT",
         bindings={
-            "dnp3": ProtocolBinding(protocol="dnp3", address="BI99", data_type="bool", unit="", raw_value=True),
-            "opcua": ProtocolBinding(protocol="opcua", address="ns=2;s=Bad", data_type="float", unit="V", raw_value=1.0),
+            "dnp3": ProtocolBinding(
+                protocol="dnp3",
+                address="BI99",
+                data_type="bool",
+                unit="",
+                protocol_metadata={"group": 1, "variation": 1, "index": 99},
+            ),
+            "opcua": ProtocolBinding(
+                protocol="opcua",
+                address="ns=2;s=Bad",
+                data_type="float",
+                unit="V",
+                protocol_metadata={"namespace": 2, "identifier_type": "s"},
+            ),
         },
     )
     try:
-        engine.registry.add(bad)
-        print("BAD.POINT: cadastrado (não deveria acontecer!)")
-    except ValidationError as e:
-        print(f"BAD.POINT: REJEITADO na validação -> {e}")
+        registry.add(bad)
+        print("BAD.POINT: deveria ter sido rejeitado")
+    except ValidationError as error:
+        print(f"BAD.POINT: REJEITADO na validação -> {error}")
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Gateway semântico multiprotocolo")
-    sub = parser.add_subparsers(dest="cmd", required=True)
+    parser = argparse.ArgumentParser()
+    sub = parser.add_subparsers(dest="command", required=True)
 
-    p_map = sub.add_parser("map", help="operações de mapeamento")
-    sub_map = p_map.add_subparsers(dest="map_cmd", required=True)
+    sub_map = sub.add_parser("map")
+    sub_map_sub = sub_map.add_subparsers(dest="map_command", required=True)
 
-    p_list = sub_map.add_parser("list", help="lista pontos cadastrados")
+    p_list = sub_map_sub.add_parser("list")
     p_list.set_defaults(func=cmd_map_list)
 
-    p_show = sub_map.add_parser("show", help="mostra um ponto")
+    p_show = sub_map_sub.add_parser("show")
     p_show.add_argument("point_id")
     p_show.set_defaults(func=cmd_map_show)
 
-    p_val = sub_map.add_parser("validate", help="valida um ponto (ou todos)")
-    p_val.add_argument("point_id", nargs="?", default=None)
-    p_val.set_defaults(func=cmd_map_validate)
+    p_validate = sub_map_sub.add_parser("validate")
+    p_validate.add_argument("point_id", nargs="?")
+    p_validate.set_defaults(func=cmd_map_validate)
 
-    p_add = sub_map.add_parser("add", help="cadastra pontos a partir de um JSON")
+    p_add = sub_map_sub.add_parser("add")
     p_add.add_argument("file")
     p_add.set_defaults(func=cmd_map_add)
 
-    p_conv = sub.add_parser("convert", help="converte um ponto entre protocolos")
+    p_conv = sub.add_parser("convert")
     p_conv.add_argument("point_id")
     p_conv.add_argument("--from", dest="source", required=True)
     p_conv.add_argument("--to", dest="targets", nargs="+", required=True)
     p_conv.set_defaults(func=cmd_convert)
 
-    p_fail = sub.add_parser("fail", help="simula perda de comunicação na origem")
+    p_fail = sub.add_parser("fail")
     p_fail.add_argument("point_id")
     p_fail.add_argument("--protocol", required=True)
     p_fail.add_argument("--to", dest="targets", nargs="+", required=True)
     p_fail.set_defaults(func=cmd_fail)
 
-    p_demo = sub.add_parser("demo", help="roda os 2 exemplos + cenário de falha")
+    p_demo = sub.add_parser("demo")
     p_demo.set_defaults(func=cmd_demo)
 
     args = parser.parse_args()

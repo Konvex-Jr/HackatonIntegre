@@ -1,127 +1,76 @@
-# Gateway semântico multiprotocolo (protótipo)
+# Gateway semântico multiprotocolo
 
-Protótipo mínimo do desafio: recebe dados de um protocolo (IEC 61850 MMS,
-DNP3, Modbus ou OPC UA), normaliza para um **modelo canônico** (tipo,
-unidade, qualidade, timestamp) e publica em qualquer outro protocolo,
-explicitando as perdas de metadados quando o destino não consegue
-representar tudo o que a origem trazia.
-
-## Por que essa arquitetura atende os requisitos não funcionais
-
-- **Sem dependência de libs industriais**: `gateway/` (o núcleo) nunca
-  importa nada de protocolo. Só `gateway/adapters.py` "conheceria"
-  bibliotecas reais — aqui elas estão simuladas para manter o exemplo
-  autocontido, mas a interface `ProtocolAdapter` é exatamente o ponto
-  onde entraria `libiec61850`, `pydnp3`, `pymodbus`, `open62541` etc.
-- **Extensível**: um protocolo novo = uma nova subclasse de
-  `ProtocolAdapter` em `adapters.py` + uma entrada no dicionário
-  `ADAPTER_CLASSES`. Nada mais muda.
-- **Particularidades abstraídas**: `CanonicalPoint` (em `canonical.py`)
-  é um superset de tipo/unidade/qualidade/timestamp que cobre os 4
-  protocolos citados no edital.
+Protótipo do desafio da WEG para normalização semântica e conversão entre IEC 61850 MMS, DNP3, Modbus e OPC UA. O fluxo central é adapter de origem, modelo canônico, mapeamento, análise de perdas e adapter de destino.
 
 ## Estrutura
 
-```
+```text
 gateway/
-  canonical.py   modelo canônico (CanonicalPoint, Quality, Timestamp)
-  units.py       tabela de unidades e dimensões físicas
-  registry.py    registro de mapeamento + validação estática
-  adapters.py    adaptadores simulados de MMS, DNP3, Modbus, OPC UA
-  engine.py      motor de normalização/denormalização
-data/mappings.json     mapeamento padrão (os 2 exemplos do desafio)
-examples/invalid_mapping.json  exemplo de config inválida p/ testar 'map add'
-cli.py          interface de linha de comando
-tests.py        testes automatizados, via terminal
+  adapters/
+  domain/
+  engine/
+  registry/
+  units/
+data/mappings.json
+examples/invalid_mapping.json
+cli.py
+api.py
+tests.py
 ```
+
+## Modelo canônico
+
+O modelo canônico mantém valor, tipo, unidade, qualidade, timestamp, endereço de origem e metadados de origem. Detalhes específicos de cada protocolo permanecem no binding.
+
+## Bindings
+
+Cada ponto possui um binding por protocolo. O binding contém endereço, tipo, unidade, escala, offset, timestamp de origem, codificação e metadados específicos. Isso permite representar DNP3 por grupo, variação e índice, IEC 61850 MMS por estrutura de objeto e functional constraint, Modbus por function code e registrador e OPC UA por NodeId e namespace.
+
+## Protocolos
+
+IEC 61850 MMS é tratado como comunicação cliente-servidor sobre o stack MMS/ACSE/ISO-on-TCP, com codificação BER no protótipo. DNP3 é modelado com tipos de dados, flags, grupos, variações e índices. Modbus usa function code, registrador e escala; o segundo exemplo de Modbus do arquivo de mapeamento usa o perfil Modbus/TCP Security, com mbap/TLS/TCP, porta 802 e metadados de autenticação. OPC UA é modelado por NodeId, namespace, DataType, StatusCode e SourceTimestamp.
+
+## Conversão
+
+```text
+PROTOCOLO DE ORIGEM
+        ↓
+     ADAPTER
+        ↓
+  MODELO CANÔNICO
+        ↓
+    MAPEAMENTO
+        ↓
+ ANÁLISE DE PERDAS
+        ↓
+     ADAPTER
+        ↓
+PROTOCOLO DE DESTINO
+```
+
+A relação da escala é `engineering = raw * scale + offset`. A conversão para o protocolo de destino usa a transformação inversa.
+
+## Tratamento de perdas
+
+Quando o destino não representa um metadado, a conversão gera um `LossEvent` com campo, valor de origem e valor de destino. Conversões de tipo que exigem arredondamento, overflow ou incompatibilidades também são registradas.
+
+## Falha de comunicação
+
+O gateway conserva o último valor bom conhecido, marca a qualidade canônica como inválida com `comm_lost` e `stale` e adapta a falha ao protocolo de destino. No exemplo Modbus há um coil de status configurado como convenção de aplicação; esse coil não é uma capacidade semântica nativa do protocolo. No OPC UA a falha é refletida como `Bad_CommunicationFailure`.
 
 ## Como rodar
 
-O núcleo (`gateway/`, `cli.py`, `tests.py`) requer só Python 3.9+ (biblioteca
-padrão, sem dependências externas). O backend HTTP (`api.py`), que serve o
-front-end web, usa FastAPI/uvicorn — instale com `pip install -r requirements.txt`.
+```bash
+python3 cli.py demo
+python3 cli.py map validate
+python3 tests.py
+```
+
+Para a API:
 
 ```bash
-cd HackatonIntegre
-
-# roda os 2 exemplos de fluxo + cenário de falha + config inválida, tudo de uma vez
-python3 cli.py demo
-
-# testes automatizados (27 verificações)
-python3 tests.py
-
-# opcional: sobe a API + front-end web em http://127.0.0.1:8000
 pip install -r requirements.txt
 python3 -m uvicorn api:app --reload
 ```
 
-## Comandos da CLI
-
-```bash
-# consultar mapeamentos
-python3 cli.py map list
-python3 cli.py map show SE01.MMXU1.PhV.phsA
-
-# validar (estático: tipo, unidade/dimensão, nº mínimo de protocolos)
-python3 cli.py map validate                      # valida todos
-python3 cli.py map validate SE01.MMXU1.PhV.phsA   # valida um ponto
-
-# cadastrar novos pontos a partir de um JSON (tenta um mapeamento inválido de propósito)
-python3 cli.py map add examples/invalid_mapping.json
-
-# converter um ponto manualmente entre protocolos
-python3 cli.py convert FDR02.AI12 --from dnp3 --to opcua
-python3 cli.py convert SE01.MMXU1.PhV.phsA --from mms --to modbus
-
-# simular perda de comunicação na origem
-python3 cli.py fail SE01.MMXU1.PhV.phsA --protocol mms --to modbus opcua
-```
-
-## Os 2 exemplos do desafio
-
-1. **IEC 61850 MMS → Modbus**: 13,8 kV (float, com qualidade e timestamp)
-   vira o registrador `138` (int, escala x10) — perde qualidade e
-   timestamp porque Modbus não tem esses canais. A perda é reportada
-   explicitamente, não fica silenciosa.
-2. **DNP3 → OPC UA**: 502,3 A (com flags e CTO resolvido) vira uma
-   variável OPC UA com `EngineeringUnits`, `StatusCode` e
-   `SourceTimestamp` — conversão sem perda, porque OPC UA representa
-   tudo que o modelo canônico carrega.
-
-## Cenário de falha
-
-`cli.py demo` desliga o adaptador MMS (`connected = False`) e converte de
-novo: o ponto canônico vira `invalid[comm_lost,stale]`, o valor fica
-congelado no último bom conhecido, e cada destino reflete a falha do seu
-jeito (Modbus via convenção de coil, DNP3 via bit `COMM_LOST`, OPC UA via
-`StatusCode = Bad_CommunicationFailure`) — sem derrubar a conversão para
-os outros destinos.
-
-## Correções aplicadas nesta revisão
-
-- **`cli.py` não executava de jeito nenhum**: os arquivos `__init__.py` dos
-  subpacotes (`gateway/registry`, `gateway/adapters`, `gateway/engine`,
-  `gateway/domain`, `gateway/units`) estavam vazios, então
-  `from gateway.registry import MappingRegistry, ...` (usado por `cli.py`)
-  falhava com `ImportError`. Populados com os re-exports corretos.
-- **Teste `opcua: severidade do StatusCode` falhava**: o adaptador OPC UA
-  não expunha `status_code_severity` no payload publicado (apenas no
-  cenário de falha). Adicionado o mapeamento `Validity -> StatusCode`
-  (`GOOD→Good`, `QUESTIONABLE→Uncertain`, `INVALID→Bad`) tanto na
-  publicação normal quanto na de falha.
-- **`requirements.txt` ausente**: `api.py` depende de FastAPI/uvicorn/pydantic,
-  mas isso não estava listado em nenhum lugar (o README dizia "sem
-  dependências externas", o que só vale para o núcleo). Arquivo criado e
-  README atualizado.
-
-Após as correções: `python3 tests.py` → **27 passaram, 0 falharam**;
-`python3 cli.py demo` roda os 4 cenários sem erro; `uvicorn api:app` sobe
-normalmente e serve o front-end em `/`.
-
-## Limitações conscientes (é um protótipo, não um produto)
-
-- Adaptadores simulam leitura/escrita em memória, não fazem I/O de rede real.
-- Conversão de unidade cobre só tensão/corrente/potência/frequência —
-  suficiente para demonstrar o mecanismo, fácil de estender em `units.py`.
-- Sem persistência de estado entre execuções além do arquivo de
-  mapeamento (`data/mappings.json`).
+A aplicação fica em `http://127.0.0.1:8000`.

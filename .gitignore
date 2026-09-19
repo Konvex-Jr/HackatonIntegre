@@ -1,2 +1,8 @@
+/gateway/adapters/__pycache__/
+/gateway/domain/__pycache__/
+/gateway/engine/__pycache__/
+/gateway/registry/__pycache__/
+/gateway/units/__pycache__/
 /gateway/__pycache__/
+
 /__pycache__

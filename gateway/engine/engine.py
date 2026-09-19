@@ -19,10 +19,10 @@ class GatewayEngine:
         mapping = self.registry.get(point_id)
         if source_protocol not in mapping.bindings:
             raise BindingNotFoundError(
-                f"Ponto '{point_id}' não tem binding cadastrado para o "
-                f"protocolo de origem '{source_protocol}'"
+                f"Ponto '{point_id}' não tem binding cadastrado para o protocolo de origem '{source_protocol}'"
             )
-
+        if source_protocol not in self.adapters:
+            raise BindingNotFoundError(f"adaptador não cadastrado para o protocolo '{source_protocol}'")
         report = ConversionReport(point_id=point_id, source_protocol=source_protocol)
         report.canonical = self._read_source_point(mapping, source_protocol, point_id, report)
         self._publish_all_targets(mapping, report, target_protocols)
@@ -43,15 +43,19 @@ class GatewayEngine:
 
     def _build_stale_point(self, point_id: str, source_protocol: str) -> CanonicalPoint:
         frozen = self._last_good.get(point_id)
-        canonical = frozen.clone() if frozen is not None else CanonicalPoint(
-            point_id=point_id,
-            value=None,
-            data_type="unknown",
-            unit="",
-            quality=Quality(validity=Validity.GOOD),
-            timestamp=Timestamp(value_utc=datetime.now(timezone.utc)),
-            source_protocol=source_protocol,
-        )
+        if frozen is not None:
+            canonical = frozen.clone()
+        else:
+            canonical = CanonicalPoint(
+                point_id=point_id,
+                value=None,
+                data_type="unknown",
+                unit="",
+                quality=Quality(validity=Validity.INVALID),
+                timestamp=Timestamp(value_utc=datetime.now(timezone.utc), sync_source="gateway"),
+                source_protocol=source_protocol,
+            )
+        canonical.source_protocol = source_protocol
         canonical.quality.validity = Validity.INVALID
         canonical.quality.add_flag("comm_lost")
         canonical.quality.add_flag("stale")
@@ -68,6 +72,8 @@ class GatewayEngine:
     ) -> Dict[str, Any]:
         if target not in mapping.bindings:
             return {"error": f"sem binding cadastrado para '{target}' neste ponto"}
+        if target not in self.adapters:
+            return {"error": f"adaptador não cadastrado para '{target}'"}
         sink = self.adapters[target]
         binding = mapping.bindings[target]
         try:

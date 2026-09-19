@@ -16,13 +16,13 @@ def validate_mapping(mapping: PointMapping) -> None:
     _validate_units_known(mapping)
     _validate_dimension_compatibility(mapping)
     _validate_engineering_ranges(mapping)
+    _validate_protocol_metadata(mapping)
 
 
 def _validate_minimum_protocol_count(mapping: PointMapping) -> None:
     if len(mapping.bindings) < MIN_PROTOCOLS:
         raise ValidationError(
-            f"{mapping.point_id}: um mapeamento precisa de ao menos "
-            f"{MIN_PROTOCOLS} protocolos para fazer sentido em um gateway"
+            f"{mapping.point_id}: um mapeamento precisa de ao menos {MIN_PROTOCOLS} protocolos para fazer sentido em um gateway"
         )
 
 
@@ -30,8 +30,7 @@ def _validate_binding_protocol_consistency(mapping: PointMapping) -> None:
     for key, binding in mapping.bindings.items():
         if binding.protocol != key:
             raise ValidationError(
-                f"{mapping.point_id}/{key}: campo 'protocol' do binding "
-                f"('{binding.protocol}') não corresponde à chave declarada"
+                f"{mapping.point_id}/{key}: campo 'protocol' do binding ('{binding.protocol}') não corresponde à chave declarada"
             )
 
 
@@ -87,3 +86,26 @@ def _validate_engineering_ranges(mapping: PointMapping) -> None:
             raise ValidationError(
                 f"{mapping.point_id}/{proto}: faixa inválida (mínimo maior que máximo)"
             )
+
+
+def _validate_protocol_metadata(mapping: PointMapping) -> None:
+    for proto, binding in mapping.bindings.items():
+        metadata = binding.protocol_metadata
+        if proto == "dnp3":
+            required = {"group", "variation", "index"}
+            missing = sorted(required - metadata.keys())
+            if missing:
+                raise ValidationError(
+                    f"{mapping.point_id}/dnp3: metadados obrigatórios ausentes: {missing}"
+                )
+            if not isinstance(metadata["group"], int) or not isinstance(metadata["variation"], int) or not isinstance(metadata["index"], int):
+                raise ValidationError(f"{mapping.point_id}/dnp3: group, variation e index devem ser inteiros")
+        if proto == "modbus":
+            if "function_code" not in metadata or "register" not in metadata:
+                raise ValidationError(f"{mapping.point_id}/modbus: function_code e register são obrigatórios")
+        if proto == "opcua":
+            if "namespace" not in metadata or "identifier_type" not in metadata:
+                raise ValidationError(f"{mapping.point_id}/opcua: namespace e identifier_type são obrigatórios")
+        if proto == "mms":
+            if "functional_constraint" not in metadata:
+                raise ValidationError(f"{mapping.point_id}/mms: functional_constraint é obrigatório")

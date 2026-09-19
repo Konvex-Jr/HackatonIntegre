@@ -10,6 +10,15 @@ class MMSAdapter(ProtocolAdapter):
     supports_quality = True
     supports_timestamp = True
 
+    def publish(self, point: CanonicalPoint, binding: ProtocolBinding) -> Dict[str, Any]:
+        payload = super().publish(point, binding)
+        payload["mms"] = {
+            "object_reference": binding.address,
+            "encoding": binding.encoding or "BER",
+            "functional_constraint": binding.protocol_metadata.get("functional_constraint"),
+        }
+        return payload
+
     def _build_failure_payload(
         self, point: CanonicalPoint, binding: ProtocolBinding, reason: str
     ) -> Dict[str, Any]:
@@ -18,10 +27,20 @@ class MMSAdapter(ProtocolAdapter):
             severity=LossSeverity.ERROR,
             source_protocol=point.source_protocol,
             target_protocol=self.protocol_name,
-            message=f"Objeto MMS marcado com Quality inválida/oldData ({reason})",
+            message=f"falha na comunicação MMS; último valor permanece com qualidade inválida ({reason})",
+            field="communication",
+            source_value=point.value,
+            target_value=None,
         )
         return {
             "address": binding.address,
-            "written_value": "Quality.validity=invalid, detailQual=oldData",
+            "written_value": None,
+            "quality": point.quality.as_dict(),
+            "timestamp": point.timestamp.as_dict(),
+            "mms": {
+                "object_reference": binding.address,
+                "encoding": binding.encoding or "BER",
+                "functional_constraint": binding.protocol_metadata.get("functional_constraint"),
+            },
             "losses": [loss.as_dict()],
         }

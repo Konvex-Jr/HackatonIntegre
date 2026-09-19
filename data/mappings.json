@@ -10,29 +10,120 @@
         "scale": 1.0,
         "offset": 0.0,
         "raw_value": 13.8,
-        "native_validity": null,
+        "raw_timestamp": "2026-09-19T10:32:15.423+00:00",
+        "native_validity": "good",
         "native_quality_flags": [],
-        "min_engineering": null,
-        "max_engineering": null
+        "min_engineering": 0.0,
+        "max_engineering": 500.0,
+        "encoding": "BER",
+        "byte_order": null,
+        "protocol_metadata": {
+          "ied": "IED1",
+          "logical_device": "LD0",
+          "logical_node": "MMXU1",
+          "data_object": "PhV",
+          "data_attributes": ["phsA", "cVal", "mag", "f"],
+          "functional_constraint": "MX"
+        }
+      },
+      "dnp3": {
+        "protocol": "dnp3",
+        "address": "AI:12",
+        "data_type": "float",
+        "unit": "kV",
+        "scale": 1.0,
+        "offset": 0.0,
+        "raw_value": 13.8,
+        "raw_timestamp": "2026-09-19T10:32:15.423+00:00",
+        "native_validity": "good",
+        "native_quality_flags": [],
+        "min_engineering": 0.0,
+        "max_engineering": 500.0,
+        "encoding": "IEEE-754-binary32",
+        "byte_order": "little",
+        "protocol_metadata": {
+          "object_type": "analog_input",
+          "group": 32,
+          "variation": 7,
+          "index": 12,
+          "event_class": 1
+        }
       },
       "modbus": {
         "protocol": "modbus",
         "address": "40001",
-        "data_type": "int",
+        "data_type": "int16",
         "unit": "kV",
         "scale": 0.1,
         "offset": 0.0,
         "raw_value": null,
+        "raw_timestamp": null,
         "native_validity": null,
         "native_quality_flags": [],
-        "min_engineering": null,
-        "max_engineering": null
+        "min_engineering": -3276.8,
+        "max_engineering": 3276.7,
+        "encoding": "16-bit-register",
+        "byte_order": "big",
+        "protocol_metadata": {
+          "function_code": 3,
+          "register": 40001,
+          "register_count": 1,
+          "transport": "mbap/tcp",
+          "port": 502,
+          "security": "plain",
+          "status_coil": "00001"
+        }
+      },
+      "opcua": {
+        "protocol": "opcua",
+        "address": "ns=2;s=SE01.MMXU1.PhV.phsA",
+        "data_type": "float",
+        "unit": "kV",
+        "scale": 1.0,
+        "offset": 0.0,
+        "raw_value": null,
+        "raw_timestamp": null,
+        "native_validity": null,
+        "native_quality_flags": [],
+        "min_engineering": 0.0,
+        "max_engineering": 500.0,
+        "encoding": "UA Binary",
+        "byte_order": null,
+        "protocol_metadata": {
+          "namespace": 2,
+          "identifier_type": "s",
+          "browse_name": "SE01.MMXU1.PhV.phsA"
+        }
       }
     }
   },
   "FDR02.AI12": {
     "point_id": "FDR02.AI12",
     "bindings": {
+      "mms": {
+        "protocol": "mms",
+        "address": "IED2/MMXU1$MX$A$phsA$mag$f",
+        "data_type": "float",
+        "unit": "A",
+        "scale": 1.0,
+        "offset": 0.0,
+        "raw_value": 502.3,
+        "raw_timestamp": "2026-09-19T10:31:42.125+00:00",
+        "native_validity": "good",
+        "native_quality_flags": [],
+        "min_engineering": 0.0,
+        "max_engineering": 2000.0,
+        "encoding": "BER",
+        "byte_order": null,
+        "protocol_metadata": {
+          "ied": "IED2",
+          "logical_device": "LD0",
+          "logical_node": "MMXU1",
+          "data_object": "A",
+          "data_attributes": ["phsA", "mag", "f"],
+          "functional_constraint": "MX"
+        }
+      },
       "dnp3": {
         "protocol": "dnp3",
         "address": "AI:12",
@@ -41,10 +132,49 @@
         "scale": 1.0,
         "offset": 0.0,
         "raw_value": 502.3,
+        "raw_timestamp": "2026-09-19T10:31:42.125+00:00",
+        "native_validity": "good",
+        "native_quality_flags": [],
+        "min_engineering": 0.0,
+        "max_engineering": 2000.0,
+        "encoding": "IEEE-754-binary32",
+        "byte_order": "little",
+        "protocol_metadata": {
+          "object_type": "analog_input",
+          "group": 32,
+          "variation": 7,
+          "index": 12,
+          "event_class": 1
+        }
+      },
+      "modbus": {
+        "protocol": "modbus",
+        "address": "40101",
+        "data_type": "int16",
+        "unit": "A",
+        "scale": 0.1,
+        "offset": 0.0,
+        "raw_value": null,
+        "raw_timestamp": null,
         "native_validity": null,
         "native_quality_flags": [],
-        "min_engineering": null,
-        "max_engineering": null
+        "min_engineering": -3276.8,
+        "max_engineering": 3276.7,
+        "encoding": "16-bit-register",
+        "byte_order": "big",
+        "protocol_metadata": {
+          "function_code": 3,
+          "register": 40101,
+          "register_count": 1,
+          "transport": "mbap/tls/tcp",
+          "port": 802,
+          "security": "tls",
+          "tls_version": "TLS 1.2",
+          "mutual_authentication": true,
+          "certificate_authentication": true,
+          "role_authorization": true,
+          "status_coil": "00101"
+        }
       },
       "opcua": {
         "protocol": "opcua",
@@ -54,10 +184,18 @@
         "scale": 1.0,
         "offset": 0.0,
         "raw_value": null,
+        "raw_timestamp": null,
         "native_validity": null,
         "native_quality_flags": [],
-        "min_engineering": null,
-        "max_engineering": null
+        "min_engineering": 0.0,
+        "max_engineering": 2000.0,
+        "encoding": "UA Binary",
+        "byte_order": null,
+        "protocol_metadata": {
+          "namespace": 2,
+          "identifier_type": "s",
+          "browse_name": "FDR02.AI12"
+        }
       }
     }
   }

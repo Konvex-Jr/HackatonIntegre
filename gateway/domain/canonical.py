@@ -18,8 +18,14 @@ class LossSeverity(Enum):
 
 
 QUALITY_FLAGS = {
-    "overflow", "out_of_range", "forced", "substituted",
-    "test", "comm_lost", "stale", "config_error",
+    "overflow",
+    "out_of_range",
+    "forced",
+    "substituted",
+    "test",
+    "comm_lost",
+    "stale",
+    "config_error",
 }
 
 
@@ -63,6 +69,9 @@ class LossEvent:
     source_protocol: str
     target_protocol: str
     message: str
+    field: Optional[str] = None
+    source_value: Optional[Any] = None
+    target_value: Optional[Any] = None
     affected_value: Optional[Any] = None
 
     def as_dict(self) -> Dict[str, Any]:
@@ -72,6 +81,9 @@ class LossEvent:
             "source_protocol": self.source_protocol,
             "target_protocol": self.target_protocol,
             "message": self.message,
+            "field": self.field,
+            "source_value": self.source_value,
+            "target_value": self.target_value,
             "affected_value": self.affected_value,
         }
 
@@ -85,7 +97,9 @@ class CanonicalPoint:
     quality: Quality
     timestamp: Timestamp
     source_protocol: str
+    source_address: Optional[str] = None
     source_raw: Dict[str, Any] = field(default_factory=dict)
+    source_metadata: Dict[str, Any] = field(default_factory=dict)
 
     def clone(self) -> "CanonicalPoint":
         return copy.deepcopy(self)
