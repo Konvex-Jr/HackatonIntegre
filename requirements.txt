@@ -1,0 +1,5 @@
+# Dependências apenas do backend HTTP (api.py) que serve o front-end.
+# O núcleo do gateway (gateway/, cli.py, tests.py) usa só a biblioteca padrão.
+fastapi>=0.110
+uvicorn>=0.29
+pydantic>=2.0
