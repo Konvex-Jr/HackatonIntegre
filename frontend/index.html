@@ -260,7 +260,7 @@
   <div class="profile-backdrop" id="profile-backdrop" aria-hidden="true">
     <section class="profile-sheet" role="dialog" aria-modal="true" aria-labelledby="profile-title">
       <div class="profile-sheet-head">
-        <div><span class="eyebrow">Perfil do operador</span><h2 id="profile-title">Configurações locais</h2></div>
+        <div><span class="eyebrow">Conta local</span><h2 id="profile-title">Seu perfil de operação</h2></div>
         <button class="profile-close" id="btn-profile-close" type="button" aria-label="Fechar perfil">×</button>
       </div>
       <div class="profile-identity">
@@ -270,6 +270,8 @@
       <form id="profile-form" class="profile-form">
         <label class="field"><span class="lbl">Nome exibido</span><input id="profile-name" type="text" maxlength="40" placeholder="Nome do operador"></label>
         <label class="field"><span class="lbl">Equipe / setor</span><input id="profile-team" type="text" maxlength="50" placeholder="Operação e manutenção"></label>
+        <label class="field"><span class="lbl">Função</span><input id="profile-role" type="text" maxlength="50" placeholder="Supervisão de integração"></label>
+        <label class="field"><span class="lbl">Turno</span><select id="profile-shift"><option value="Manhã">Manhã</option><option value="Tarde">Tarde</option><option value="Noite">Noite</option><option value="Administrativo">Administrativo</option></select></label>
         <div class="profile-meta"><span>Subestação monitorada</span><b>SE-01 · Centro de Operação</b></div>
         <div class="profile-actions"><button class="btn btn-ghost" id="btn-profile-cancel" type="button">Cancelar</button><button class="btn btn-primary" type="submit">Salvar perfil</button></div>
       </form>

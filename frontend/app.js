@@ -1298,10 +1298,12 @@
       var profileForm = document.getElementById("profile-form");
       var profileName = document.getElementById("profile-name");
       var profileTeam = document.getElementById("profile-team");
-      var profileData = JSON.parse(localStorage.getItem("operator-profile") || "null") || { name: "Operador", team: "Supervisão de integração" };
+      var profileData = JSON.parse(localStorage.getItem("operator-profile") || "null") || { name: "Operador", team: "Operação e manutenção", role: "Supervisão de integração", shift: "Administrativo" };
       var profileTriggerName = document.getElementById("profile-trigger-name");
       var profileCardName = document.getElementById("profile-card-name");
       var profileCardRole = document.getElementById("profile-card-role");
+      var profileRole = document.getElementById("profile-role");
+      var profileShift = document.getElementById("profile-shift");
       var profileAvatar = document.getElementById("profile-avatar");
       var profileAvatarLarge = document.getElementById("profile-avatar-large");
 
@@ -1313,7 +1315,7 @@
         var initials = profileInitials(profileData.name);
         profileTriggerName.textContent = profileData.name;
         profileCardName.textContent = profileData.name;
-        profileCardRole.textContent = profileData.team;
+        profileCardRole.textContent = profileData.role + " · " + profileData.shift;
         profileAvatar.textContent = initials;
         profileAvatarLarge.textContent = initials;
       }
@@ -1324,6 +1326,8 @@
         if (open) {
           profileName.value = profileData.name;
           profileTeam.value = profileData.team;
+          profileRole.value = profileData.role || "Supervisão de integração";
+          profileShift.value = profileData.shift || "Administrativo";
           requestAnimationFrame(function () { profileName.focus(); });
         }
       }
@@ -1335,7 +1339,12 @@
       profileBackdrop.addEventListener("click", function (event) { if (event.target === profileBackdrop) toggleProfile(false); });
       profileForm.addEventListener("submit", function (event) {
         event.preventDefault();
-        profileData = { name: profileName.value.trim() || "Operador", team: profileTeam.value.trim() || "Supervisão de integração" };
+        profileData = {
+          name: profileName.value.trim() || "Operador",
+          team: profileTeam.value.trim() || "Operação e manutenção",
+          role: profileRole.value.trim() || "Supervisão de integração",
+          shift: profileShift.value
+        };
         localStorage.setItem("operator-profile", JSON.stringify(profileData));
         renderProfile();
         toggleProfile(false);
